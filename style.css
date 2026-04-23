@@ -1,0 +1,63 @@
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1c1a16;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+#site-title {
+  position: fixed;
+  top: 26px;
+  left: 34px;
+  z-index: 100;
+  color: #d0c4a4;
+  font-size: 13px;
+  font-weight: normal;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.werf-map {
+  width: 100%;
+  height: 100%;
+}
+
+.zone {
+  cursor: pointer;
+}
+
+.zone rect,
+.zone ellipse,
+.zone circle,
+.zone line,
+.zone polygon,
+.zone path {
+  transition: filter 0.18s ease;
+}
+
+.zone:hover rect:not([fill="none"]),
+.zone:hover ellipse,
+.zone:hover circle {
+  filter: brightness(1.14) saturate(1.08);
+}
+
+text.label {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  pointer-events: none;
+  user-select: none;
+}
