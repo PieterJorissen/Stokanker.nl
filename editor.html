@@ -26,6 +26,7 @@ const RANGES = {
 
 const frame = document.getElementById('frame');
 let doc, svg, selected = null, origBox = null, selRect = null;
+let arLocked = false, arRatio = null;
 
 // ── styles injected into iframe ────────────
 const CSS = `
@@ -69,6 +70,12 @@ const CSS = `
   cursor: pointer; flex-shrink: 0; line-height: 1;
 }
 .nudge:active { background: #1e2e1c; color: #9dc; }
+#__lock {
+  background: #141c13; border: 1px solid #253525; color: #6a8a68;
+  font: 10px monospace; padding: 5px 10px; border-radius: 2px;
+  cursor: pointer; line-height: 1; margin-bottom: 9px;
+}
+#__lock.on { border-color: #5a9; color: #7dc; background: #0d1e14; }
 #__hud-out {
   margin-top: 6px; font: 10px/1.7 monospace; color: #5a9;
   background: #0d140c; border: 1px solid #1e2e1c; border-radius: 2px;
@@ -102,7 +109,8 @@ const CSS = `
 
 // ── HTML injected into iframe ──────────────
 function buildHUD() {
-  const rows = ['x','y','w','h'].map(k => `
+  const rows = ['x','y','w','h'].flatMap((k, i) => {
+    const row = `
     <div class="hr">
       <label>${k}</label>
       <input type="range" id="__s${k}" min="${RANGES[k][0]}" max="${RANGES[k][1]}" step="1">
@@ -111,8 +119,9 @@ function buildHUD() {
       <button class="nudge" data-k="${k}" data-d="-1">−1</button>
       <button class="nudge" data-k="${k}" data-d="1">+1</button>
       <button class="nudge" data-k="${k}" data-d="10">+10</button>
-    </div>`).join('');
-
+    </div>`;
+    return i === 1 ? [row, `<button id="__lock">⛓ lock ratio</button>`] : [row];
+  }).join('');
   const picks = BUILDINGS.map(id =>
     `<button class="pb" data-id="${id}">${id}</button>`).join('');
 
@@ -188,20 +197,45 @@ frame.addEventListener('load', () => {
   // close HUD
   doc.getElementById('__hud-close').addEventListener('click', closeHUD);
 
+  // aspect ratio lock
+  const lockBtn = doc.getElementById('__lock');
+  lockBtn.addEventListener('click', () => {
+    arLocked = !arLocked;
+    if (arLocked) arRatio = getVals().w / getVals().h;
+    lockBtn.classList.toggle('on', arLocked);
+  });
+
+  function enforceRatio(changed) {
+    if (!arLocked || !arRatio) return;
+    if (changed === 'w') {
+      const w = +doc.getElementById('__nw').value;
+      const h = Math.round(w / arRatio);
+      doc.getElementById('__nh').value = h;
+      doc.getElementById('__sh').value = h;
+    } else if (changed === 'h') {
+      const h = +doc.getElementById('__nh').value;
+      const w = Math.round(h * arRatio);
+      doc.getElementById('__nw').value = w;
+      doc.getElementById('__sw').value = w;
+    }
+  }
+
   // sliders + numbers
   ['x','y','w','h'].forEach(k => {
     const s = doc.getElementById('__s' + k);
     const n = doc.getElementById('__n' + k);
-    s.addEventListener('input', () => { n.value = s.value; apply(); });
-    n.addEventListener('input', () => { s.value = n.value; apply(); });
+    s.addEventListener('input', () => { n.value = s.value; enforceRatio(k); apply(); });
+    n.addEventListener('input', () => { s.value = n.value; enforceRatio(k); apply(); });
   });
 
   // nudge buttons
   doc.querySelectorAll('.nudge').forEach(btn =>
     btn.addEventListener('click', () => {
-      const n = doc.getElementById('__n' + btn.dataset.k);
+      const k = btn.dataset.k;
+      const n = doc.getElementById('__n' + k);
       n.value = +n.value + +btn.dataset.d;
-      doc.getElementById('__s' + btn.dataset.k).value = n.value;
+      doc.getElementById('__s' + k).value = n.value;
+      enforceRatio(k);
       apply();
     }));
 
@@ -286,6 +320,7 @@ function setVals(v) {
     doc.getElementById('__s' + k).value = r;
     doc.getElementById('__n' + k).value = r;
   });
+  if (arLocked) arRatio = v.w / v.h;
 }
 
 function clearSel() {
