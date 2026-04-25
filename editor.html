@@ -26,6 +26,7 @@ const frame = document.getElementById('frame');
 let doc, svg;
 let selected = null, origBox = null, selRect = null;
 let arLocked = false, arRatio = null;
+let origOpacity = '1', isDimmed = false;
 
 // ── viewBox state ──────────────────────────
 let vb = { x: 0, y: 0, w: 1400, h: 900 };
@@ -107,6 +108,12 @@ svg { touch-action: none; user-select: none; }
   cursor: pointer; line-height: 1; margin-bottom: 9px;
 }
 #__lock.on { border-color: #5a9; color: #7dc; background: #0d1e14; }
+#__dim {
+  background: #141c13; border: 1px solid #253525; color: #6a8a68;
+  font: 10px monospace; padding: 5px 10px; border-radius: 2px;
+  cursor: pointer; line-height: 1; margin-bottom: 9px; margin-left: 6px;
+}
+#__dim.on { border-color: #5a9; color: #7dc; background: #0d1e14; }
 #__hud-out {
   margin-top: 6px; font: 10px/1.7 monospace; color: #5a9;
   background: #0d140c; border: 1px solid #1e2e1c; border-radius: 2px;
@@ -151,7 +158,7 @@ function buildHUD() {
       <button class="nudge" data-k="${k}" data-d="1">+1</button>
       <button class="nudge" data-k="${k}" data-d="10">+10</button>
     </div>`;
-    return i === 1 ? [row, `<button id="__lock">⛓ lock ratio</button>`] : [row];
+    return i === 1 ? [row, `<button id="__lock">⛓ lock ratio</button><button id="__dim">◐ dim</button>`] : [row];
   }).join('');
 
   const picks = BUILDINGS.map(id =>
@@ -230,6 +237,18 @@ frame.addEventListener('load', () => {
     arLocked = !arLocked;
     if (arLocked) arRatio = getVals().w / getVals().h;
     lockBtn.classList.toggle('on', arLocked);
+  });
+
+  doc.getElementById('__dim').addEventListener('click', () => {
+    if (!selected) return;
+    isDimmed = !isDimmed;
+    if (isDimmed) {
+      origOpacity = selected.getAttribute('opacity') ?? '1';
+      selected.setAttribute('opacity', '0.35');
+    } else {
+      selected.setAttribute('opacity', origOpacity);
+    }
+    doc.getElementById('__dim').classList.toggle('on', isDimmed);
   });
 
   function enforceRatio(changed) {
@@ -379,6 +398,14 @@ frame.addEventListener('load', () => {
 function pick(id) {
   const el = doc.getElementById(id);
   if (!el) return;
+
+  if (isDimmed && selected) {
+    selected.setAttribute('opacity', origOpacity);
+    isDimmed = false;
+    doc.getElementById('__dim').classList.remove('on');
+  }
+  origOpacity = el.getAttribute('opacity') ?? '1';
+
   selected = el;
 
   doc.querySelectorAll('.pb').forEach(b =>
@@ -403,6 +430,11 @@ function pick(id) {
 }
 
 function closeHUD() {
+  if (isDimmed && selected) {
+    selected.setAttribute('opacity', origOpacity);
+    isDimmed = false;
+    doc.getElementById('__dim').classList.remove('on');
+  }
   doc.getElementById('__hud').classList.remove('open');
   doc.querySelectorAll('.pb').forEach(b => b.classList.remove('active'));
   clearSel();
