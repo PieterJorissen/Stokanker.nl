@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>editor — stokanker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      font: 12px/1.5 monospace;
+      background: #111;
+      color: #aaa;
+    }
+
+    /* ── panel ────────────────────────────── */
+    #panel {
+      width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #222;
+    }
+
+    #list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .bld {
+      padding: 5px 8px;
+      border: 1px solid transparent;
+      border-radius: 2px;
+      background: none;
+      color: #555;
+      cursor: pointer;
+      text-align: left;
+      font: 11px/1 monospace;
+      transition: color 0.1s, border-color 0.1s;
+    }
+    .bld:hover  { color: #aaa; border-color: #333; }
+    .bld.active { color: #7dc; border-color: #3a5a50; background: #151e1c; }
+
+    #hint {
+      padding: 12px;
+      color: #333;
+      font-size: 11px;
+      border-top: 1px solid #222;
+    }
+
+    #sliders {
+      padding: 14px 12px 10px;
+      border-top: 1px solid #222;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .row span {
+      width: 12px;
+      color: #555;
+      font-size: 11px;
+    }
+    .row input[type=range] {
+      flex: 1;
+      accent-color: #5a9;
+    }
+    .row input[type=number] {
+      width: 52px;
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      color: #ccc;
+      font: 11px monospace;
+      padding: 3px 4px;
+      border-radius: 2px;
+      -moz-appearance: textfield;
+    }
+    .row input[type=number]::-webkit-inner-spin-button { display: none; }
+
+    #out {
+      padding: 10px 12px;
+      border-top: 1px solid #222;
+      display: none;
+    }
+    #readout {
+      font: 10px/1.7 monospace;
+      color: #5a9;
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 2px;
+      padding: 7px 8px;
+      cursor: pointer;
+      user-select: all;
+      white-space: pre;
+    }
+    #readout:hover { border-color: #3a5a50; }
+
+    /* ── map ──────────────────────────────── */
+    #map { flex: 1; }
+    iframe { width: 100%; height: 100%; border: none; display: block; }
+  </style>
+</head>
+<body>
+
+<div id="panel">
+  <div id="list"></div>
+  <div id="hint">← select a building</div>
+  <div id="sliders">
+    <div class="row"><span>x</span><input type="range" id="sx" min="-200" max="1400" step="1"><input type="number" id="nx"></div>
+    <div class="row"><span>y</span><input type="range" id="sy" min="-200" max="900"  step="1"><input type="number" id="ny"></div>
+    <div class="row"><span>w</span><input type="range" id="sw" min="5"    max="700"  step="1"><input type="number" id="nw"></div>
+    <div class="row"><span>h</span><input type="range" id="sh" min="2"    max="400"  step="1"><input type="number" id="nh"></div>
+  </div>
+  <div id="out"><pre id="readout">—</pre></div>
+</div>
+
+<div id="map">
+  <iframe id="frame" src="index.html"></iframe>
+</div>
+
+<script>
+const BUILDINGS = [
+  'drijvende-bok', 'pontoon', 'electric-crane', 'portal-crane',
+  'fabriek', 'romney-loods', 'werkplaats', 'ons-huis',
+  'schuur-complex', 'boomgaard', 'smalspoor-cart'
+];
+
+const frame  = document.getElementById('frame');
+const listEl = document.getElementById('list');
+const hint   = document.getElementById('hint');
+const slPane = document.getElementById('sliders');
+const outEl  = document.getElementById('out');
+
+let selected  = null;
+let origBox   = null;
+let activeBtn = null;
+let selRect   = null;
+
+// ── sidebar buttons ────────────────────────
+BUILDINGS.forEach((id, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'bld';
+  btn.textContent = id;
+  btn.addEventListener('click', () => pick(id, btn));
+  listEl.appendChild(btn);
+});
+
+// ── slider ↔ number sync ───────────────────
+['x','y','w','h'].forEach(k => {
+  const s = document.getElementById('s' + k);
+  const n = document.getElementById('n' + k);
+  s.addEventListener('input', () => { n.value = s.value; apply(); });
+  n.addEventListener('input', () => { s.value = n.value; apply(); });
+});
+
+function getVals() {
+  return { x: +nx.value, y: +ny.value, w: +nw.value, h: +nh.value };
+}
+const nx = document.getElementById('nx');
+const ny = document.getElementById('ny');
+const nw = document.getElementById('nw');
+const nh = document.getElementById('nh');
+
+function setVals(v) {
+  ['x','y','w','h'].forEach(k => {
+    const r = Math.round(v[k]);
+    document.getElementById('s' + k).value = r;
+    document.getElementById('n' + k).value = r;
+  });
+}
+
+// ── transform parsing ──────────────────────
+function parseTr(t) {
+  let tx = 0, ty = 0, sx = 1, sy = 1;
+  const tm = t && t.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
+  if (tm) { tx = +tm[1]; ty = +tm[2]; }
+  const s2 = t && t.match(/scale\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
+  if (s2) { sx = +s2[1]; sy = +s2[2]; }
+  else { const s1 = t && t.match(/scale\(\s*([-\d.]+)/); if (s1) sx = sy = +s1[1]; }
+  return { tx, ty, sx, sy };
+}
+
+// ── select ─────────────────────────────────
+function pick(id, btn) {
+  const doc = frame.contentDocument;
+  const el  = doc && doc.getElementById(id);
+  if (!el) return;
+
+  clearSel(doc);
+  if (activeBtn) activeBtn.classList.remove('active');
+
+  selected  = el;
+  activeBtn = btn;
+  btn.classList.add('active');
+
+  const saved = el.getAttribute('transform') || '';
+  el.removeAttribute('transform');
+  origBox = el.getBBox();
+  el.setAttribute('transform', saved);
+
+  const { tx, ty, sx, sy } = parseTr(saved);
+  const x = origBox.x * sx + tx;
+  const y = origBox.y * sy + ty;
+  const w = origBox.width  * sx;
+  const h = origBox.height * sy;
+
+  setVals({ x, y, w, h });
+  drawSel(doc, x, y, w, h);
+  showOut(id, x, y, w, h);
+
+  hint.style.display   = 'none';
+  slPane.style.display = 'flex';
+  outEl.style.display  = 'block';
+}
+
+// ── apply sliders → transform ──────────────
+function apply() {
+  if (!selected || !origBox) return;
+  const { x, y, w, h } = getVals();
+  const sx = w / origBox.width;
+  const sy = h / origBox.height;
+  const tx = x - origBox.x * sx;
+  const ty = y - origBox.y * sy;
+
+  let t = `translate(${tx.toFixed(1)}, ${ty.toFixed(1)})`;
+  if (Math.abs(sx - 1) > 0.0005 || Math.abs(sy - 1) > 0.0005)
+    t += ` scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
+
+  selected.setAttribute('transform', t);
+  drawSel(frame.contentDocument, x, y, w, h);
+  showOut(selected.id, x, y, w, h);
+}
+
+// ── selection rect overlay ─────────────────
+function clearSel(doc) {
+  if (selRect) { selRect.remove(); selRect = null; }
+}
+
+function drawSel(doc, x, y, w, h) {
+  clearSel(doc);
+  const svg = doc.querySelector('svg');
+  selRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  selRect.setAttribute('x', x - 3);
+  selRect.setAttribute('y', y - 3);
+  selRect.setAttribute('width',  w + 6);
+  selRect.setAttribute('height', h + 6);
+  selRect.setAttribute('fill',           'none');
+  selRect.setAttribute('stroke',         'rgba(100,220,160,0.75)');
+  selRect.setAttribute('stroke-width',   '1.5');
+  selRect.setAttribute('stroke-dasharray', '5 3');
+  selRect.setAttribute('pointer-events', 'none');
+  svg.appendChild(selRect);
+}
+
+// ── readout ────────────────────────────────
+function showOut(id, x, y, w, h) {
+  document.getElementById('readout').textContent =
+    `id="${id}"  x ${Math.round(x)}  y ${Math.round(y)}  w ${Math.round(w)}  h ${Math.round(h)}`;
+}
+
+// ── click-to-select on map ─────────────────
+frame.addEventListener('load', () => {
+  const doc = frame.contentDocument;
+  BUILDINGS.forEach((id, i) => {
+    const el = doc.getElementById(id);
+    if (!el) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      pick(id, listEl.children[i]);
+    });
+  });
+});
+</script>
+
+</body>
+</html>
