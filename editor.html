@@ -6,204 +6,189 @@
   <title>editor — stokanker</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-      font: 12px/1.5 monospace;
-      background: #111;
-      color: #aaa;
-    }
-
-    /* ── panel ────────────────────────────── */
-    #panel {
-      width: 240px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid #222;
-    }
-
-    #list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .bld {
-      padding: 5px 8px;
-      border: 1px solid transparent;
-      border-radius: 2px;
-      background: none;
-      color: #555;
-      cursor: pointer;
-      text-align: left;
-      font: 11px/1 monospace;
-      transition: color 0.1s, border-color 0.1s;
-    }
-    .bld:hover  { color: #aaa; border-color: #333; }
-    .bld.active { color: #7dc; border-color: #3a5a50; background: #151e1c; }
-
-    #hint {
-      padding: 12px;
-      color: #333;
-      font-size: 11px;
-      border-top: 1px solid #222;
-    }
-
-    #sliders {
-      padding: 14px 12px 10px;
-      border-top: 1px solid #222;
-      display: none;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .row span {
-      width: 12px;
-      color: #555;
-      font-size: 11px;
-    }
-    .row input[type=range] {
-      flex: 1;
-      accent-color: #5a9;
-    }
-    .row input[type=number] {
-      width: 52px;
-      background: #181818;
-      border: 1px solid #2a2a2a;
-      color: #ccc;
-      font: 11px monospace;
-      padding: 3px 4px;
-      border-radius: 2px;
-      -moz-appearance: textfield;
-    }
-    .row input[type=number]::-webkit-inner-spin-button { display: none; }
-
-    #out {
-      padding: 10px 12px;
-      border-top: 1px solid #222;
-      display: none;
-    }
-    #readout {
-      font: 10px/1.7 monospace;
-      color: #5a9;
-      background: #141414;
-      border: 1px solid #222;
-      border-radius: 2px;
-      padding: 7px 8px;
-      cursor: pointer;
-      user-select: all;
-      white-space: pre;
-    }
-    #readout:hover { border-color: #3a5a50; }
-
-    /* ── map ──────────────────────────────── */
-    #map { flex: 1; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0f08; }
     iframe { width: 100%; height: 100%; border: none; display: block; }
   </style>
 </head>
 <body>
-
-<div id="panel">
-  <div id="list"></div>
-  <div id="hint">← select a building</div>
-  <div id="sliders">
-    <div class="row"><span>x</span><input type="range" id="sx" min="-200" max="1400" step="1"><input type="number" id="nx"></div>
-    <div class="row"><span>y</span><input type="range" id="sy" min="-200" max="900"  step="1"><input type="number" id="ny"></div>
-    <div class="row"><span>w</span><input type="range" id="sw" min="5"    max="700"  step="1"><input type="number" id="nw"></div>
-    <div class="row"><span>h</span><input type="range" id="sh" min="2"    max="400"  step="1"><input type="number" id="nh"></div>
-  </div>
-  <div id="out"><pre id="readout">—</pre></div>
-</div>
-
-<div id="map">
-  <iframe id="frame" src="index.html"></iframe>
-</div>
-
+<iframe id="frame" src="index.html"></iframe>
 <script>
 const BUILDINGS = [
-  'drijvende-bok', 'pontoon', 'electric-crane', 'portal-crane',
-  'fabriek', 'romney-loods', 'werkplaats', 'ons-huis',
-  'schuur-complex', 'boomgaard', 'smalspoor-cart'
+  'drijvende-bok','pontoon','electric-crane','portal-crane',
+  'fabriek','romney-loods','werkplaats','ons-huis',
+  'schuur-complex','boomgaard','smalspoor-cart'
 ];
 
-const frame  = document.getElementById('frame');
-const listEl = document.getElementById('list');
-const hint   = document.getElementById('hint');
-const slPane = document.getElementById('sliders');
-const outEl  = document.getElementById('out');
+const RANGES = {
+  x: [-200, 1400], y: [-200, 900], w: [5, 700], h: [2, 400]
+};
 
-let selected  = null;
-let origBox   = null;
-let activeBtn = null;
-let selRect   = null;
+const frame = document.getElementById('frame');
+let doc, svg, selected = null, origBox = null, selRect = null;
 
-// ── sidebar buttons ────────────────────────
-BUILDINGS.forEach((id, i) => {
-  const btn = document.createElement('button');
-  btn.className = 'bld';
-  btn.textContent = id;
-  btn.addEventListener('click', () => pick(id, btn));
-  listEl.appendChild(btn);
-});
-
-// ── slider ↔ number sync ───────────────────
-['x','y','w','h'].forEach(k => {
-  const s = document.getElementById('s' + k);
-  const n = document.getElementById('n' + k);
-  s.addEventListener('input', () => { n.value = s.value; apply(); });
-  n.addEventListener('input', () => { s.value = n.value; apply(); });
-});
-
-function getVals() {
-  return { x: +nx.value, y: +ny.value, w: +nw.value, h: +nh.value };
+// ── styles injected into iframe ────────────
+const CSS = `
+#__hud {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(10,16,10,0.97);
+  border-top: 1px solid #253525;
+  padding: 10px 14px 18px;
+  font: 13px/1.4 monospace;
+  color: #aaa;
+  z-index: 9000;
+  transform: translateY(100%);
+  transition: transform 0.2s ease;
 }
-const nx = document.getElementById('nx');
-const ny = document.getElementById('ny');
-const nw = document.getElementById('nw');
-const nh = document.getElementById('nh');
+#__hud.open { transform: translateY(0); }
+#__hud-bar {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+#__hud-name { color: #7dc; font-size: 12px; letter-spacing: 0.03em; }
+#__hud-close {
+  background: none; border: none; color: #444;
+  font-size: 22px; line-height: 1; cursor: pointer; padding: 0 2px;
+}
+#__hud-close:active { color: #aaa; }
+.hr {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 9px;
+}
+.hr label { width: 14px; color: #4a6a48; font-size: 11px; flex-shrink: 0; }
+.hr input[type=range] { flex: 1; accent-color: #5a9; height: 4px; }
+.hr input[type=number] {
+  width: 50px; background: #141c13; border: 1px solid #253525;
+  color: #ccc; font: 11px monospace; padding: 4px 5px; border-radius: 2px;
+  -moz-appearance: textfield;
+}
+.hr input[type=number]::-webkit-inner-spin-button { display: none; }
+.nudge {
+  background: #141c13; border: 1px solid #253525; color: #6a8a68;
+  font: 10px monospace; padding: 4px 6px; border-radius: 2px;
+  cursor: pointer; flex-shrink: 0; line-height: 1;
+}
+.nudge:active { background: #1e2e1c; color: #9dc; }
+#__hud-out {
+  margin-top: 6px; font: 10px/1.7 monospace; color: #5a9;
+  background: #0d140c; border: 1px solid #1e2e1c; border-radius: 2px;
+  padding: 6px 8px; cursor: pointer; user-select: all; white-space: pre;
+}
+#__hud-out:hover { border-color: #3a5a40; }
+#__pb {
+  position: fixed; top: 14px; right: 14px;
+  background: rgba(10,16,10,0.90); border: 1px solid #253525;
+  color: #7dc; font: 15px monospace; padding: 8px 11px;
+  border-radius: 4px; cursor: pointer; z-index: 9001;
+  line-height: 1;
+}
+#__pb:active { background: #1a2418; }
+#__pl {
+  position: fixed; top: 52px; right: 14px;
+  background: rgba(10,16,10,0.97); border: 1px solid #253525;
+  border-radius: 4px; padding: 6px; z-index: 9001;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 175px; display: none;
+}
+#__pl.open { display: flex; }
+.pb {
+  padding: 7px 10px; background: none;
+  border: 1px solid transparent; border-radius: 2px;
+  color: #556654; font: 11px monospace; text-align: left; cursor: pointer;
+}
+.pb:hover  { color: #aaa; border-color: #253525; }
+.pb.active { color: #7dc; border-color: #3a5a50; background: #111e11; }
+`;
 
-function setVals(v) {
-  ['x','y','w','h'].forEach(k => {
-    const r = Math.round(v[k]);
-    document.getElementById('s' + k).value = r;
-    document.getElementById('n' + k).value = r;
+// ── HTML injected into iframe ──────────────
+function buildHUD() {
+  const rows = ['x','y','w','h'].map(k => `
+    <div class="hr">
+      <label>${k}</label>
+      <input type="range" id="__s${k}" min="${RANGES[k][0]}" max="${RANGES[k][1]}" step="1">
+      <input type="number" id="__n${k}">
+      <button class="nudge" data-k="${k}" data-d="-10">−10</button>
+      <button class="nudge" data-k="${k}" data-d="-1">−1</button>
+      <button class="nudge" data-k="${k}" data-d="1">+1</button>
+      <button class="nudge" data-k="${k}" data-d="10">+10</button>
+    </div>`).join('');
+
+  const picks = BUILDINGS.map(id =>
+    `<button class="pb" data-id="${id}">${id}</button>`).join('');
+
+  return `
+    <div id="__hud">
+      <div id="__hud-bar">
+        <span id="__hud-name">—</span>
+        <button id="__hud-close">×</button>
+      </div>
+      ${rows}
+      <pre id="__hud-out">—</pre>
+    </div>
+    <button id="__pb">☰</button>
+    <div id="__pl">${picks}</div>`;
+}
+
+// ── init on load ───────────────────────────
+frame.addEventListener('load', () => {
+  doc = frame.contentDocument;
+  svg = doc.querySelector('svg');
+
+  const style = doc.createElement('style');
+  style.textContent = CSS;
+  doc.head.appendChild(style);
+
+  const wrap = doc.createElement('div');
+  wrap.innerHTML = buildHUD();
+  while (wrap.firstChild) doc.body.appendChild(wrap.firstChild);
+
+  // picker toggle
+  const pb = doc.getElementById('__pb');
+  const pl = doc.getElementById('__pl');
+  pb.addEventListener('click', e => { e.stopPropagation(); pl.classList.toggle('open'); });
+  doc.addEventListener('click', e => {
+    if (!pb.contains(e.target) && !pl.contains(e.target))
+      pl.classList.remove('open');
   });
-}
+  pl.querySelectorAll('.pb').forEach(b =>
+    b.addEventListener('click', () => { pick(b.dataset.id); pl.classList.remove('open'); }));
 
-// ── transform parsing ──────────────────────
-function parseTr(t) {
-  let tx = 0, ty = 0, sx = 1, sy = 1;
-  const tm = t && t.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
-  if (tm) { tx = +tm[1]; ty = +tm[2]; }
-  const s2 = t && t.match(/scale\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
-  if (s2) { sx = +s2[1]; sy = +s2[2]; }
-  else { const s1 = t && t.match(/scale\(\s*([-\d.]+)/); if (s1) sx = sy = +s1[1]; }
-  return { tx, ty, sx, sy };
-}
+  // close HUD
+  doc.getElementById('__hud-close').addEventListener('click', closeHUD);
 
-// ── select ─────────────────────────────────
-function pick(id, btn) {
-  const doc = frame.contentDocument;
-  const el  = doc && doc.getElementById(id);
+  // sliders + numbers
+  ['x','y','w','h'].forEach(k => {
+    const s = doc.getElementById('__s' + k);
+    const n = doc.getElementById('__n' + k);
+    s.addEventListener('input', () => { n.value = s.value; apply(); });
+    n.addEventListener('input', () => { s.value = n.value; apply(); });
+  });
+
+  // nudge buttons
+  doc.querySelectorAll('.nudge').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const n = doc.getElementById('__n' + btn.dataset.k);
+      n.value = +n.value + +btn.dataset.d;
+      doc.getElementById('__s' + btn.dataset.k).value = n.value;
+      apply();
+    }));
+
+  // tap building on map
+  BUILDINGS.forEach(id => {
+    const el = doc.getElementById(id);
+    if (!el) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', e => { e.stopPropagation(); pick(id); });
+  });
+});
+
+// ── select building ────────────────────────
+function pick(id) {
+  const el = doc.getElementById(id);
   if (!el) return;
+  selected = el;
 
-  clearSel(doc);
-  if (activeBtn) activeBtn.classList.remove('active');
-
-  selected  = el;
-  activeBtn = btn;
-  btn.classList.add('active');
+  doc.querySelectorAll('.pb').forEach(b =>
+    b.classList.toggle('active', b.dataset.id === id));
 
   const saved = el.getAttribute('transform') || '';
   el.removeAttribute('transform');
@@ -217,15 +202,20 @@ function pick(id, btn) {
   const h = origBox.height * sy;
 
   setVals({ x, y, w, h });
-  drawSel(doc, x, y, w, h);
+  doc.getElementById('__hud-name').textContent = id;
+  drawSel(x, y, w, h);
   showOut(id, x, y, w, h);
-
-  hint.style.display   = 'none';
-  slPane.style.display = 'flex';
-  outEl.style.display  = 'block';
+  doc.getElementById('__hud').classList.add('open');
 }
 
-// ── apply sliders → transform ──────────────
+function closeHUD() {
+  doc.getElementById('__hud').classList.remove('open');
+  doc.querySelectorAll('.pb').forEach(b => b.classList.remove('active'));
+  clearSel();
+  selected = null;
+}
+
+// ── apply values → SVG transform ──────────
 function apply() {
   if (!selected || !origBox) return;
   const { x, y, w, h } = getVals();
@@ -233,57 +223,61 @@ function apply() {
   const sy = h / origBox.height;
   const tx = x - origBox.x * sx;
   const ty = y - origBox.y * sy;
-
   let t = `translate(${tx.toFixed(1)}, ${ty.toFixed(1)})`;
   if (Math.abs(sx - 1) > 0.0005 || Math.abs(sy - 1) > 0.0005)
     t += ` scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
-
   selected.setAttribute('transform', t);
-  drawSel(frame.contentDocument, x, y, w, h);
+  drawSel(x, y, w, h);
   showOut(selected.id, x, y, w, h);
 }
 
-// ── selection rect overlay ─────────────────
-function clearSel(doc) {
+// ── helpers ────────────────────────────────
+function parseTr(t) {
+  let tx=0, ty=0, sx=1, sy=1;
+  const tm = t && t.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
+  if (tm) { tx=+tm[1]; ty=+tm[2]; }
+  const s2 = t && t.match(/scale\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
+  if (s2) { sx=+s2[1]; sy=+s2[2]; }
+  else { const s1 = t && t.match(/scale\(\s*([-\d.]+)/); if (s1) sx=sy=+s1[1]; }
+  return { tx, ty, sx, sy };
+}
+
+function getVals() {
+  return Object.fromEntries(['x','y','w','h'].map(k =>
+    [k, +doc.getElementById('__n' + k).value]));
+}
+
+function setVals(v) {
+  ['x','y','w','h'].forEach(k => {
+    const r = Math.round(v[k]);
+    doc.getElementById('__s' + k).value = r;
+    doc.getElementById('__n' + k).value = r;
+  });
+}
+
+function clearSel() {
   if (selRect) { selRect.remove(); selRect = null; }
 }
 
-function drawSel(doc, x, y, w, h) {
-  clearSel(doc);
-  const svg = doc.querySelector('svg');
+function drawSel(x, y, w, h) {
+  clearSel();
   selRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  selRect.setAttribute('x', x - 3);
-  selRect.setAttribute('y', y - 3);
+  selRect.setAttribute('x',      x - 3);
+  selRect.setAttribute('y',      y - 3);
   selRect.setAttribute('width',  w + 6);
   selRect.setAttribute('height', h + 6);
-  selRect.setAttribute('fill',           'none');
-  selRect.setAttribute('stroke',         'rgba(100,220,160,0.75)');
-  selRect.setAttribute('stroke-width',   '1.5');
+  selRect.setAttribute('fill',             'none');
+  selRect.setAttribute('stroke',           'rgba(100,220,160,0.75)');
+  selRect.setAttribute('stroke-width',     '1.5');
   selRect.setAttribute('stroke-dasharray', '5 3');
-  selRect.setAttribute('pointer-events', 'none');
+  selRect.setAttribute('pointer-events',   'none');
   svg.appendChild(selRect);
 }
 
-// ── readout ────────────────────────────────
 function showOut(id, x, y, w, h) {
-  document.getElementById('readout').textContent =
+  doc.getElementById('__hud-out').textContent =
     `id="${id}"  x ${Math.round(x)}  y ${Math.round(y)}  w ${Math.round(w)}  h ${Math.round(h)}`;
 }
-
-// ── click-to-select on map ─────────────────
-frame.addEventListener('load', () => {
-  const doc = frame.contentDocument;
-  BUILDINGS.forEach((id, i) => {
-    const el = doc.getElementById(id);
-    if (!el) return;
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      pick(id, listEl.children[i]);
-    });
-  });
-});
 </script>
-
 </body>
 </html>
