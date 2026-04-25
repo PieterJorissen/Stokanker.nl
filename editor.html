@@ -154,13 +154,13 @@ frame.addEventListener('load', () => {
   pl.querySelectorAll('.pb').forEach(b =>
     b.addEventListener('click', () => { pick(b.dataset.id); pl.classList.remove('open'); }));
 
-  // underlay opacity toggle
+  // underlay controls
+  const btnStyle = `background:rgba(10,16,10,0.90);border:1px solid #253525;color:#7dc;
+    font:11px monospace;padding:7px 10px;border-radius:4px;cursor:pointer;z-index:9001;line-height:1;`;
+
   const utog = doc.createElement('button');
-  utog.id = '__utog';
   utog.textContent = '◐ underlay';
-  utog.style.cssText = `position:fixed;bottom:14px;right:14px;background:rgba(10,16,10,0.90);
-    border:1px solid #253525;color:#7dc;font:11px monospace;padding:7px 10px;
-    border-radius:4px;cursor:pointer;z-index:9001;line-height:1;`;
+  utog.style.cssText = `position:fixed;bottom:14px;right:14px;${btnStyle}`;
   doc.body.appendChild(utog);
   let ulVisible = true;
   utog.addEventListener('click', () => {
@@ -168,6 +168,21 @@ frame.addEventListener('load', () => {
     ulVisible = !ulVisible;
     ul.setAttribute('opacity', ulVisible ? '0.4' : '0');
     utog.style.color = ulVisible ? '#7dc' : '#3a5a50';
+  });
+
+  const urot = doc.createElement('button');
+  urot.textContent = '↻ flip';
+  urot.style.cssText = `position:fixed;bottom:14px;right:120px;${btnStyle}`;
+  doc.body.appendChild(urot);
+  const TRANSFORMS = [
+    'translate(55, 838) rotate(270)',
+    'translate(1205, 58) rotate(90)'
+  ];
+  let rotIdx = 0;
+  urot.addEventListener('click', () => {
+    rotIdx = 1 - rotIdx;
+    const img = doc.querySelector('#underlay image');
+    img.setAttribute('transform', TRANSFORMS[rotIdx]);
   });
 
   // close HUD
