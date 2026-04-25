@@ -20,17 +20,45 @@ const BUILDINGS = [
   'schuur-complex','boomgaard','smalspoor-cart'
 ];
 
-const RANGES = {
-  x: [-200, 1400], y: [-200, 900], w: [5, 700], h: [2, 400]
-};
+const RANGES = { x: [-400, 1800], y: [-400, 1300], w: [5, 1400], h: [2, 900] };
 
 const frame = document.getElementById('frame');
-let doc, svg, selected = null, origBox = null, selRect = null;
+let doc, svg;
+let selected = null, origBox = null, selRect = null;
 let arLocked = false, arRatio = null;
-let dragState = null;
+
+// ── viewBox state ──────────────────────────
+let vb = { x: 0, y: 0, w: 1400, h: 900 };
+function setVB() {
+  svg.setAttribute('viewBox', `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`);
+}
+
+// ── pointer tracking ──────────────────────
+let dragState  = null;  // { pointerId, startSVG, originXY }
+let panState   = null;  // { pointerId, startSVG, startVB }
+let pinchState = null;  // { startDist, startMidSVG, startVB }
+const ptrs = new Map(); // pointerId → {x, y} in client space
+
+function pinchInfo() {
+  const [a, b] = [...ptrs.values()];
+  return {
+    dist: Math.hypot(b.x - a.x, b.y - a.y),
+    mid:  { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+  };
+}
+
+// Convert client coords → SVG coords using current viewBox + SVG rect
+function toSVG(cx, cy) {
+  const r = svg.getBoundingClientRect();
+  return {
+    x: vb.x + (cx - r.left) / r.width  * vb.w,
+    y: vb.y + (cy - r.top)  / r.height * vb.h
+  };
+}
 
 // ── styles injected into iframe ────────────
 const CSS = `
+svg { touch-action: none; user-select: none; }
 #__hud {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: rgba(10,16,10,0.97);
@@ -41,6 +69,7 @@ const CSS = `
   z-index: 9000;
   transform: translateY(100%);
   transition: transform 0.2s ease;
+  touch-action: auto;
 }
 #__hud.open { transform: translateY(0); }
 #__hud-bar {
@@ -87,8 +116,8 @@ const CSS = `
   position: fixed; top: 14px; right: 14px;
   background: rgba(10,16,10,0.90); border: 1px solid #253525;
   color: #7dc; font: 15px monospace; padding: 8px 11px;
-  border-radius: 4px; cursor: pointer; z-index: 9001;
-  line-height: 1;
+  border-radius: 4px; cursor: pointer; z-index: 9001; line-height: 1;
+  touch-action: auto;
 }
 #__pb:active { background: #1a2418; }
 #__pl {
@@ -96,7 +125,7 @@ const CSS = `
   background: rgba(10,16,10,0.97); border: 1px solid #253525;
   border-radius: 4px; padding: 6px; z-index: 9001;
   display: flex; flex-direction: column; gap: 2px;
-  min-width: 175px; display: none;
+  min-width: 175px; display: none; touch-action: auto;
 }
 #__pl.open { display: flex; }
 .pb {
@@ -108,7 +137,7 @@ const CSS = `
 .pb.active { color: #7dc; border-color: #3a5a50; background: #111e11; }
 `;
 
-// ── HTML injected into iframe ──────────────
+// ── HUD HTML ───────────────────────────────
 function buildHUD() {
   const rows = ['x','y','w','h'].flatMap((k, i) => {
     const row = `
@@ -123,6 +152,7 @@ function buildHUD() {
     </div>`;
     return i === 1 ? [row, `<button id="__lock">⛓ lock ratio</button>`] : [row];
   }).join('');
+
   const picks = BUILDINGS.map(id =>
     `<button class="pb" data-id="${id}">${id}</button>`).join('');
 
@@ -153,20 +183,20 @@ frame.addEventListener('load', () => {
   wrap.innerHTML = buildHUD();
   while (wrap.firstChild) doc.body.appendChild(wrap.firstChild);
 
-  // picker toggle
+  // ── picker ─────────────────────────────
   const pb = doc.getElementById('__pb');
   const pl = doc.getElementById('__pl');
   pb.addEventListener('click', e => { e.stopPropagation(); pl.classList.toggle('open'); });
   doc.addEventListener('click', e => {
-    if (!pb.contains(e.target) && !pl.contains(e.target))
-      pl.classList.remove('open');
+    if (!pb.contains(e.target) && !pl.contains(e.target)) pl.classList.remove('open');
   });
   pl.querySelectorAll('.pb').forEach(b =>
     b.addEventListener('click', () => { pick(b.dataset.id); pl.classList.remove('open'); }));
 
-  // underlay controls
+  // ── underlay controls ──────────────────
   const btnStyle = `background:rgba(10,16,10,0.90);border:1px solid #253525;color:#7dc;
-    font:11px monospace;padding:7px 10px;border-radius:4px;cursor:pointer;z-index:9001;line-height:1;`;
+    font:11px monospace;padding:7px 10px;border-radius:4px;cursor:pointer;z-index:9001;
+    line-height:1;touch-action:auto;`;
 
   const utog = doc.createElement('button');
   utog.textContent = '◐ underlay';
@@ -184,21 +214,16 @@ frame.addEventListener('load', () => {
   urot.textContent = '↻ flip';
   urot.style.cssText = `position:fixed;bottom:14px;right:120px;${btnStyle}`;
   doc.body.appendChild(urot);
-  const TRANSFORMS = [
-    'translate(55, 838) rotate(270)',
-    'translate(1205, 58) rotate(90)'
-  ];
+  const TRANSFORMS = ['translate(55, 838) rotate(270)', 'translate(1205, 58) rotate(90)'];
   let rotIdx = 0;
   urot.addEventListener('click', () => {
     rotIdx = 1 - rotIdx;
-    const img = doc.querySelector('#underlay image');
-    img.setAttribute('transform', TRANSFORMS[rotIdx]);
+    doc.querySelector('#underlay image').setAttribute('transform', TRANSFORMS[rotIdx]);
   });
 
-  // close HUD
+  // ── HUD controls ───────────────────────
   doc.getElementById('__hud-close').addEventListener('click', closeHUD);
 
-  // aspect ratio lock
   const lockBtn = doc.getElementById('__lock');
   lockBtn.addEventListener('click', () => {
     arLocked = !arLocked;
@@ -209,19 +234,16 @@ frame.addEventListener('load', () => {
   function enforceRatio(changed) {
     if (!arLocked || !arRatio) return;
     if (changed === 'w') {
-      const w = +doc.getElementById('__nw').value;
-      const h = Math.round(w / arRatio);
+      const h = Math.round(+doc.getElementById('__nw').value / arRatio);
       doc.getElementById('__nh').value = h;
       doc.getElementById('__sh').value = h;
     } else if (changed === 'h') {
-      const h = +doc.getElementById('__nh').value;
-      const w = Math.round(h * arRatio);
+      const w = Math.round(+doc.getElementById('__nh').value * arRatio);
       doc.getElementById('__nw').value = w;
       doc.getElementById('__sw').value = w;
     }
   }
 
-  // sliders + numbers
   ['x','y','w','h'].forEach(k => {
     const s = doc.getElementById('__s' + k);
     const n = doc.getElementById('__n' + k);
@@ -229,7 +251,6 @@ frame.addEventListener('load', () => {
     n.addEventListener('input', () => { s.value = n.value; enforceRatio(k); apply(); });
   });
 
-  // nudge buttons
   doc.querySelectorAll('.nudge').forEach(btn =>
     btn.addEventListener('click', () => {
       const k = btn.dataset.k;
@@ -240,53 +261,117 @@ frame.addEventListener('load', () => {
       apply();
     }));
 
-  // drag + tap buildings on map
+  // ── building drag ──────────────────────
   BUILDINGS.forEach(id => {
     const el = doc.getElementById(id);
     if (!el) return;
     el.style.cursor = 'grab';
-    el.style.touchAction = 'none';
 
     el.addEventListener('pointerdown', e => {
-      e.preventDefault();
       e.stopPropagation();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (ptrs.size >= 2) {
+        // second finger: cancel drag, let SVG pointerdown start pinch
+        dragState = null;
+        return;
+      }
+
       pick(id);
-      const p = svgPt(e);
       dragState = {
-        startSVG: p,
-        originXY: { x: getVals().x, y: getVals().y },
-        moved: false
+        pointerId: e.pointerId,
+        startSVG:  toSVG(e.clientX, e.clientY),
+        originXY:  { x: getVals().x, y: getVals().y }
       };
     });
   });
 
+  // ── pan + pinch on empty SVG ───────────
+  svg.addEventListener('pointerdown', e => {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (ptrs.size === 2) {
+      dragState = null;
+      panState  = null;
+      const { dist, mid } = pinchInfo();
+      pinchState = {
+        startDist:   dist,
+        startMidSVG: toSVG(mid.x, mid.y),
+        startVB:     { ...vb }
+      };
+    } else if (!dragState) {
+      panState = {
+        pointerId:    e.pointerId,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        startVB:      { ...vb }
+      };
+    }
+  });
+
+  // ── pointermove: drag / pan / pinch ───
   doc.addEventListener('pointermove', e => {
-    if (!dragState || !selected) return;
-    const p = svgPt(e);
-    const dx = p.x - dragState.startSVG.x;
-    const dy = p.y - dragState.startSVG.y;
-    if (!dragState.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-    dragState.moved = true;
-    selected.style.cursor = 'grabbing';
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    const x = Math.round(dragState.originXY.x + dx);
-    const y = Math.round(dragState.originXY.y + dy);
-    doc.getElementById('__nx').value = x;
-    doc.getElementById('__sx').value = x;
-    doc.getElementById('__ny').value = y;
-    doc.getElementById('__sy').value = y;
-    apply();
+    if (pinchState && ptrs.size >= 2) {
+      const { dist, mid } = pinchInfo();
+      const factor = pinchState.startDist / dist;
+      const r      = svg.getBoundingClientRect();
+      const newW   = pinchState.startVB.w * factor;
+      const newH   = pinchState.startVB.h * factor;
+      vb.w = newW;
+      vb.h = newH;
+      vb.x = pinchState.startMidSVG.x - (mid.x - r.left) / r.width  * newW;
+      vb.y = pinchState.startMidSVG.y - (mid.y - r.top)  / r.height * newH;
+      setVB();
+
+    } else if (dragState && e.pointerId === dragState.pointerId && selected) {
+      const p  = toSVG(e.clientX, e.clientY);
+      const dx = p.x - dragState.startSVG.x;
+      const dy = p.y - dragState.startSVG.y;
+      if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+      selected.style.cursor = 'grabbing';
+      const x = Math.round(dragState.originXY.x + dx);
+      const y = Math.round(dragState.originXY.y + dy);
+      doc.getElementById('__nx').value = x;
+      doc.getElementById('__sx').value = x;
+      doc.getElementById('__ny').value = y;
+      doc.getElementById('__sy').value = y;
+      apply();
+
+    } else if (panState && e.pointerId === panState.pointerId) {
+      const r = svg.getBoundingClientRect();
+      vb.x = panState.startVB.x - (e.clientX - panState.startClientX) / r.width  * panState.startVB.w;
+      vb.y = panState.startVB.y - (e.clientY - panState.startClientY) / r.height * panState.startVB.h;
+      setVB();
+    }
   });
 
-  doc.addEventListener('pointerup', () => {
-    if (dragState && selected) selected.style.cursor = 'grab';
-    dragState = null;
-  });
+  function cleanPointer(id) {
+    ptrs.delete(id);
+    if (dragState?.pointerId === id) {
+      if (selected) selected.style.cursor = 'grab';
+      dragState = null;
+    }
+    if (panState?.pointerId === id) panState = null;
+    if (ptrs.size < 2) pinchState = null;
+  }
+  doc.addEventListener('pointerup',     e => cleanPointer(e.pointerId));
+  doc.addEventListener('pointercancel', e => cleanPointer(e.pointerId));
 
-  doc.addEventListener('pointercancel', () => {
-    if (dragState && selected) selected.style.cursor = 'grab';
-    dragState = null;
-  });
+  // ── scroll wheel zoom ─────────────────
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 1.12 : 0.89;
+    const r = svg.getBoundingClientRect();
+    const px = vb.x + (e.clientX - r.left) / r.width  * vb.w;
+    const py = vb.y + (e.clientY - r.top)  / r.height * vb.h;
+    vb.x = px + (vb.x - px) * factor;
+    vb.y = py + (vb.y - py) * factor;
+    vb.w *= factor;
+    vb.h *= factor;
+    setVB();
+  }, { passive: false });
 });
 
 // ── select building ────────────────────────
@@ -340,13 +425,6 @@ function apply() {
 }
 
 // ── helpers ────────────────────────────────
-function svgPt(e) {
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX;
-  pt.y = e.clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
-}
-
 function parseTr(t) {
   let tx=0, ty=0, sx=1, sy=1;
   const tm = t && t.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
@@ -378,15 +456,15 @@ function clearSel() {
 function drawSel(x, y, w, h) {
   clearSel();
   selRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  selRect.setAttribute('x',      x - 3);
-  selRect.setAttribute('y',      y - 3);
-  selRect.setAttribute('width',  w + 6);
-  selRect.setAttribute('height', h + 6);
-  selRect.setAttribute('fill',             'none');
-  selRect.setAttribute('stroke',           'rgba(100,220,160,0.75)');
-  selRect.setAttribute('stroke-width',     '1.5');
-  selRect.setAttribute('stroke-dasharray', '5 3');
-  selRect.setAttribute('pointer-events',   'none');
+  selRect.setAttribute('x',               x - 3);
+  selRect.setAttribute('y',               y - 3);
+  selRect.setAttribute('width',           w + 6);
+  selRect.setAttribute('height',          h + 6);
+  selRect.setAttribute('fill',            'none');
+  selRect.setAttribute('stroke',          'rgba(100,220,160,0.75)');
+  selRect.setAttribute('stroke-width',    '1.5');
+  selRect.setAttribute('stroke-dasharray','5 3');
+  selRect.setAttribute('pointer-events',  'none');
   svg.appendChild(selRect);
 }
 
