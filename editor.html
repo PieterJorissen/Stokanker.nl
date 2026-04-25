@@ -14,6 +14,7 @@
 <iframe id="frame" src="index.html"></iframe>
 <script>
 const BUILDINGS = [
+  'underlay',
   'drijvende-bok','pontoon','electric-crane','portal-crane',
   'fabriek','romney-loods','werkplaats','ons-huis',
   'schuur-complex','boomgaard','smalspoor-cart'
@@ -152,6 +153,22 @@ frame.addEventListener('load', () => {
   });
   pl.querySelectorAll('.pb').forEach(b =>
     b.addEventListener('click', () => { pick(b.dataset.id); pl.classList.remove('open'); }));
+
+  // underlay opacity toggle
+  const utog = doc.createElement('button');
+  utog.id = '__utog';
+  utog.textContent = '◐ underlay';
+  utog.style.cssText = `position:fixed;bottom:14px;right:14px;background:rgba(10,16,10,0.90);
+    border:1px solid #253525;color:#7dc;font:11px monospace;padding:7px 10px;
+    border-radius:4px;cursor:pointer;z-index:9001;line-height:1;`;
+  doc.body.appendChild(utog);
+  let ulVisible = true;
+  utog.addEventListener('click', () => {
+    const ul = doc.getElementById('underlay');
+    ulVisible = !ulVisible;
+    ul.setAttribute('opacity', ulVisible ? '0.4' : '0');
+    utog.style.color = ulVisible ? '#7dc' : '#3a5a50';
+  });
 
   // close HUD
   doc.getElementById('__hud-close').addEventListener('click', closeHUD);
