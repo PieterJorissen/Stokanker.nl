@@ -27,6 +27,7 @@ const RANGES = {
 const frame = document.getElementById('frame');
 let doc, svg, selected = null, origBox = null, selRect = null;
 let arLocked = false, arRatio = null;
+let dragState = null;
 
 // ── styles injected into iframe ────────────
 const CSS = `
@@ -239,12 +240,52 @@ frame.addEventListener('load', () => {
       apply();
     }));
 
-  // tap building on map
+  // drag + tap buildings on map
   BUILDINGS.forEach(id => {
     const el = doc.getElementById(id);
     if (!el) return;
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', e => { e.stopPropagation(); pick(id); });
+    el.style.cursor = 'grab';
+    el.style.touchAction = 'none';
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      pick(id);
+      const p = svgPt(e);
+      dragState = {
+        startSVG: p,
+        originXY: { x: getVals().x, y: getVals().y },
+        moved: false
+      };
+    });
+  });
+
+  doc.addEventListener('pointermove', e => {
+    if (!dragState || !selected) return;
+    const p = svgPt(e);
+    const dx = p.x - dragState.startSVG.x;
+    const dy = p.y - dragState.startSVG.y;
+    if (!dragState.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    dragState.moved = true;
+    selected.style.cursor = 'grabbing';
+
+    const x = Math.round(dragState.originXY.x + dx);
+    const y = Math.round(dragState.originXY.y + dy);
+    doc.getElementById('__nx').value = x;
+    doc.getElementById('__sx').value = x;
+    doc.getElementById('__ny').value = y;
+    doc.getElementById('__sy').value = y;
+    apply();
+  });
+
+  doc.addEventListener('pointerup', () => {
+    if (dragState && selected) selected.style.cursor = 'grab';
+    dragState = null;
+  });
+
+  doc.addEventListener('pointercancel', () => {
+    if (dragState && selected) selected.style.cursor = 'grab';
+    dragState = null;
   });
 });
 
@@ -299,6 +340,13 @@ function apply() {
 }
 
 // ── helpers ────────────────────────────────
+function svgPt(e) {
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
 function parseTr(t) {
   let tx=0, ty=0, sx=1, sy=1;
   const tm = t && t.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)/);
