@@ -131,6 +131,7 @@ function buildHUD() {
 // ── init on load ───────────────────────────
 frame.addEventListener('load', () => {
   doc = frame.contentDocument;
+  frame.contentWindow.openDialogue = () => {};
   svg = doc.querySelector('svg');
 
   const style = doc.createElement('style');
