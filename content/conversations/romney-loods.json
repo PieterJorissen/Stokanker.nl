@@ -1,0 +1,54 @@
+{
+  "building": "romney-loods",
+  "npc": "jan",
+  "npcName": "Jan",
+  "entry": "root",
+  "nodes": {
+    "root": {
+      "type": "npc",
+      "flag": "talked:jan-root",
+      "text": "Anchors and chains. Steel parts with no name you would know. Door at the right end is open.",
+      "choices": [
+        { "label": "What kind of anchors?",  "next": "anchors" },
+        { "label": "Anything for sale?",     "next": "sale-gate" },
+        { "label": "I'll look around.",      "next": "end" }
+      ]
+    },
+    "anchors": {
+      "type": "npc",
+      "flag": "talked:jan-anchors",
+      "text": "Delta, fisherman, a few Bruce copies. Some going back thirty years. All worked.",
+      "choices": [
+        { "label": "Anything for sale?",  "next": "sale-gate" },
+        { "label": "Thanks.",             "next": "end" }
+      ]
+    },
+    "sale-gate": {
+      "type": "gate",
+      "condition": { "buildingOpen": "romney-loods" },
+      "yes": "sale",
+      "no": "sale-closed"
+    },
+    "sale": {
+      "type": "npc",
+      "flag": "talked:jan-sale",
+      "text": "Depends what you need. Ask.",
+      "choices": [
+        { "label": "What do you have?",  "next": "inventory" },
+        { "label": "I'll come back.",    "next": "end" }
+      ]
+    },
+    "sale-closed": {
+      "type": "narrate",
+      "text": "The building is locked. Come back Monday.",
+      "choices": [{ "label": "Understood.", "next": "end" }]
+    },
+    "inventory": {
+      "type": "inventory",
+      "flag": "talked:jan-inventory",
+      "filter": { "location": "romney-loods" },
+      "fallback": "Nothing listed right now. Ask anyway.",
+      "choices": [{ "label": "Thanks.", "next": "end" }]
+    }
+  }
+}
