@@ -306,9 +306,10 @@ for (const zone of document.querySelectorAll('.zone')) {
 
 // Map click
 document.getElementById('map').addEventListener('click', e => {
-  const zone = e.target.closest('.zone.open');
-  if (!zone || !INTERACTIVE.has(zone.id)) return;
-  startDialogue(zone.id);
+  const open   = e.target.closest('.zone.open');
+  const closed = e.target.closest('.zone.closed');
+  if (open   && INTERACTIVE.has(open.id))   { startDialogue(open.id); return; }
+  if (closed && INTERACTIVE.has(closed.id)) { narratorEl.textContent = 'Closed. Come back during working hours.'; }
 });
 
 let currentDialogue = null;
