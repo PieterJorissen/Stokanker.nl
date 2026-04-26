@@ -44,11 +44,12 @@ export default (drawing) => {
     }
 
     function resetCanvas() {
-        const { layers: layersData, transforms } = currentItem();
+        const { layers: layersData, transforms, underlay } = currentItem();
 
         Object.assign(drawing, {
             layers: structuredClone(layersData),
-            transforms: structuredClone(transforms)
+            transforms: structuredClone(transforms),
+            ...(underlay !== undefined && { underlay: structuredClone(underlay) }),
         });
         document.dispatchEvent(new Event('initializeCanvas'));
     }

@@ -59,7 +59,8 @@ function save(msg) {
 
     createBackup({
         layers: structuredClone(drawing.layers),
-        transforms: structuredClone(drawing.transforms)
+        transforms: structuredClone(drawing.transforms),
+        underlay: structuredClone(drawing.underlay),
     });
     document.dispatchEvent(new Event('saveDrawing'));
 }
