@@ -1,0 +1,20 @@
+{
+  "npcs": [
+    {
+      "id": "jan",
+      "name": "Jan",
+      "building": "romney-loods",
+      "schedule": { "weekdays": "08:00-17:30", "saturday": "08:00-13:00", "sunday": null },
+      "personality": "terse",
+      "away-when": []
+    },
+    {
+      "id": "cook",
+      "name": "de kok",
+      "building": "drijvende-bok",
+      "schedule": { "weekdays": "07:00-19:00", "saturday": "07:00-19:00", "sunday": "07:00-19:00" },
+      "personality": "talkative",
+      "away-when": ["ship-out-of-port"]
+    }
+  ]
+}
