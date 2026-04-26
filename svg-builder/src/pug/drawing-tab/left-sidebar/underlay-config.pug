@@ -1,0 +1,12 @@
+fieldset#underlay-config.collapsable
+    legend Underlay Image
+    label
+        span Reference image
+        input#underlay-upload(type="file" accept="image/jpeg,image/png,image/webp")
+    label
+        span Opacity
+        input#underlay-opacity(type="range" min="0" max="1" step="0.05" value="0.5")
+    label
+        input#underlay-export-toggle(type="checkbox" name="underlay-export-toggle")
+        |  Include in export
+    button#underlay-clear(type="button") Clear

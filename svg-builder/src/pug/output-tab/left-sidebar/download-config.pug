@@ -1,0 +1,18 @@
+fieldset#download
+    legend Download
+    #copy-btns
+        button#get-markup(title="Copy Markup to clipboard")
+            svg.icon
+                use(href="#markup")
+        button#get-data-uri(title="Copy Data URI to clipboard") <code>data:...</code>
+    fieldset
+        legend Fileformat
+        label
+            span SVG
+            input(type="radio" name="file-format" value="svg" checked)
+        label
+            span PNG
+            input(type="radio" name="file-format" value="png")
+    button#download-btn
+        svg.icon
+            use(href="#download-icon")

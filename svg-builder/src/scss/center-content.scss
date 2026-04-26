@@ -1,0 +1,40 @@
+#center-content {
+    grid-area: center;
+    display: flex;
+    flex-direction: column;
+}
+
+#center-top {
+    height: var(--center-top-height);
+    display: flex;
+    gap: 4px;
+
+    label {
+        gap: 4px;
+    }
+
+    fieldset {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        [data-mode="rect"] &.for-path,
+        [data-mode="ellipse"] &.for-path {
+            display: none;
+        }
+    }
+}
+
+#time-travel fieldset {
+    display: flex;
+}
+
+#preview {
+    grid-area: center;
+
+    svg {
+        background: var(--sub-bg-color);
+        margin: 8px;
+    }
+}

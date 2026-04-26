@@ -1,0 +1,64 @@
+#active-layer-config {
+
+    fieldset:not(:last-child) {
+        margin-bottom: 0;
+    }
+
+    .for-path,
+    .for-rect,
+    .for-text {
+        flex-direction: column;
+    }
+
+    .empty {
+        display: none;
+    }
+}
+
+#path-config__misc select {
+    max-width: 144px;
+    margin-bottom: 8px;
+}
+
+.cmd-config {
+    position: relative;
+    margin-top: 0.5rem;
+
+    button {
+        background-color: var(--main-bg-color);
+        color: var(--main-heading-color);
+        position: absolute;
+        width: 24px;
+        padding: 0;
+        margin: 0;
+    }
+
+    .icon {
+        stroke: var(--main-text-color);
+    }
+
+    // the first point of a path shouldnt be deleted
+    &:nth-of-type(1) {
+        .cmd-config__delete-point-btn {
+            display: none;
+        }
+    }
+}
+
+.cmd-config__delete-point-btn {
+    top: -19px;
+    right: 4px;
+}
+
+.cmd-config__add-point-btn {
+    bottom: -16px;
+    right: 40%;
+}
+
+#text-config {
+
+    input:not([type]),
+    select {
+        width: 100%;
+    }
+}

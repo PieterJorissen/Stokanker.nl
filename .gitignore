@@ -32,3 +32,8 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# SVG builder sub-project artifacts
+svg-builder/node_modules/
+svg-builder/docs/
+svg-builder-tool/
