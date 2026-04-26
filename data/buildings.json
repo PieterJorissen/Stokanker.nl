@@ -1,0 +1,13 @@
+{
+  "buildings": [
+    { "id": "romney-loods",   "hours": { "mon-fri": "08:00-17:30", "sat": "08:00-13:00", "sun": null }, "closed-dates": [] },
+    { "id": "fabriek",        "hours": { "mon-fri": "08:00-17:30", "sat": "08:00-13:00", "sun": null }, "closed-dates": [] },
+    { "id": "werkplaats",     "hours": { "mon-fri": "08:00-17:30", "sat": "08:00-13:00", "sun": null }, "closed-dates": [] },
+    { "id": "ons-huis",       "hours": null, "closed-dates": [] },
+    { "id": "schuur-complex", "hours": null, "closed-dates": [] },
+    { "id": "portal-crane",   "hours": { "mon-fri": "08:00-17:30", "sat": null,          "sun": null }, "closed-dates": [] },
+    { "id": "drijvende-bok",  "hours": null, "closed-dates": [] },
+    { "id": "boomgaard",      "hours": { "mon-fri": "08:00-17:30", "sat": "08:00-17:30", "sun": "10:00-17:00" }, "closed-dates": [] },
+    { "id": "smalspoor-cart", "hours": { "mon-fri": "08:00-17:30", "sat": "08:00-13:00", "sun": null }, "closed-dates": [] }
+  ]
+}
