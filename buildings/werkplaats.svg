@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <style>text.label { font-family: Georgia, serif; pointer-events: none; }</style>
+  <g id="werkplaats" class="zone" transform="translate(325, 43) scale(0.619, 0.829)">
+    <rect x="356" y="638" width="590" height="82" rx="2" fill="#080810" opacity="0.18" transform="translate(5,5)"/>
+    <g transform="translate(651, 679) rotate(90) translate(-107, -255)">
+      <rect x="53.57"   y="73.456" width="53.813" height="364.203" fill="#696969" stroke="#383838" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="107.195" y="72.034" width="53.25"  height="366.234" fill="#616161" stroke="#404040" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+    <rect x="896" y="632" width="50" height="92" fill="#6070a0"/>
+    <rect x="896" y="632" width="50" height="3"  fill="#5060a0"/>
+    <rect x="904" y="646" width="14" height="14" fill="#8aa8d0" opacity="0.55"/>
+    <rect x="922" y="646" width="14" height="14" fill="#8aa8d0" opacity="0.55"/>
+    <text x="620" y="683" class="label" text-anchor="middle" font-size="13" fill="rgba(195,205,228,0.72)">de werkplaats</text>
+    <text x="920" y="675" class="label" text-anchor="middle" font-size="9"  fill="rgba(170,195,228,0.55)">kantoor</text>
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <g id="smalspoor">
+    <line x1="55"   y1="388" x2="1200" y2="388" stroke="#706850" stroke-width="1.5" opacity="0.55"/>
+    <line x1="55"   y1="396" x2="1200" y2="396" stroke="#706850" stroke-width="1.5" opacity="0.55"/>
+    <line x1="80"   y1="384" x2="80"   y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="120"  y1="384" x2="120"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="160"  y1="384" x2="160"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="200"  y1="384" x2="200"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="260"  y1="384" x2="260"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="320"  y1="384" x2="320"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="380"  y1="384" x2="380"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="450"  y1="384" x2="450"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="520"  y1="384" x2="520"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="600"  y1="384" x2="600"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="680"  y1="384" x2="680"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="760"  y1="384" x2="760"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="840"  y1="384" x2="840"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="920"  y1="384" x2="920"  y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="1000" y1="384" x2="1000" y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="1080" y1="384" x2="1080" y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+    <line x1="1160" y1="384" x2="1160" y2="400" stroke="#5a5040" stroke-width="2" opacity="0.45"/>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <style>text.label { font-family: Georgia, serif; pointer-events: none; }</style>
+  <g id="boomgaard" transform="translate(471, -337) scale(0.575, 1)">
+    <rect x="1048" y="783" width="252" height="98" rx="4" fill="#6a9838" opacity="0.62"/>
+    <circle cx="1074" cy="820" r="14" fill="#507828"/>
+    <circle cx="1118" cy="834" r="12" fill="#487020"/>
+    <circle cx="1162" cy="814" r="15" fill="#507828"/>
+    <circle cx="1206" cy="828" r="12" fill="#487020"/>
+    <circle cx="1250" cy="812" r="13" fill="#507828"/>
+    <circle cx="1248" cy="800" r="19" fill="#386018"/>
+    <circle cx="1248" cy="800" r="19" fill="none" stroke="#284e10" stroke-width="3"/>
+    <circle cx="1248" cy="800" r="12" fill="#2a5010"/>
+    <text x="1174" y="875" class="label" text-anchor="middle" font-size="9" fill="rgba(155,200,110,0.5)">boomgaard</text>
+  </g>
+</svg>

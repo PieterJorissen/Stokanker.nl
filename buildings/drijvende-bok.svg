@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <g id="drijvende-bok" class="zone" transform="translate(207, 204)">
+    <rect x="55" y="182" width="215" height="58" rx="4" fill="#c07818"/>
+    <rect x="55" y="182" width="215" height="8"  fill="#a86408"/>
+    <rect x="106" y="143" width="13" height="97" fill="#d08828"/>
+    <rect x="86"  y="152" width="50" height="9"  fill="#c07820"/>
+    <rect x="86"  y="174" width="50" height="6"  fill="#c07820" opacity="0.6"/>
+    <title>drijvende bok</title>
+  </g>
+</svg>

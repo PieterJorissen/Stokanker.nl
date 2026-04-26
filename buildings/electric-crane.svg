@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <g id="electric-crane" class="zone" transform="translate(988, 20)">
+    <ellipse cx="148" cy="272" rx="22" ry="9" fill="#848890"/>
+    <rect x="142" y="230" width="12" height="44" fill="#909898"/>
+    <line x1="148" y1="234" x2="232" y2="214" stroke="#909898" stroke-width="4.5"/>
+    <line x1="148" y1="234" x2="94"  y2="250" stroke="#909898" stroke-width="3"/>
+    <line x1="214" y1="218" x2="218" y2="254" stroke="#707878" stroke-width="1.5" opacity="0.55"/>
+    <title>elektrische kraan</title>
+  </g>
+</svg>

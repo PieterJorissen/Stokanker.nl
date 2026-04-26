@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <style>text.label { font-family: Georgia, serif; pointer-events: none; }</style>
+  <g id="ons-huis" class="zone" transform="translate(484, 384) scale(0.484, 0.366)">
+    <rect x="1048" y="452" width="225" height="205" rx="2" fill="#080808" opacity="0.25" transform="translate(6,6)"/>
+    <rect x="1048" y="452" width="225" height="205" fill="#c8b890"/>
+    <rect x="1048" y="452" width="225" height="205" fill="#283848" opacity="0.82"/>
+    <line x1="1048" y1="454" x2="1273" y2="454" stroke="#182838" stroke-width="3.5"/>
+    <rect x="1060" y="472" width="38" height="32" fill="#4870a8" opacity="0.68"/>
+    <rect x="1116" y="472" width="38" height="32" fill="#4870a8" opacity="0.68"/>
+    <rect x="1172" y="472" width="38" height="32" fill="#4870a8" opacity="0.68"/>
+    <rect x="1060" y="528" width="38" height="30" fill="#4870a8" opacity="0.62"/>
+    <rect x="1116" y="528" width="38" height="30" fill="#4870a8" opacity="0.62"/>
+    <rect x="1172" y="528" width="38" height="30" fill="#4870a8" opacity="0.62"/>
+    <rect x="1058" y="628" width="205" height="14" fill="#1e2e40" opacity="0.85"/>
+    <rect x="1078" y="636" width="7" height="9" rx="3" fill="#1a2838" opacity="0.55"/>
+    <rect x="1116" y="636" width="7" height="9" rx="3" fill="#1a2838" opacity="0.55"/>
+    <rect x="1154" y="636" width="7" height="9" rx="3" fill="#1a2838" opacity="0.55"/>
+    <rect x="1192" y="636" width="7" height="9" rx="3" fill="#1a2838" opacity="0.55"/>
+    <rect x="1230" y="636" width="7" height="9" rx="3" fill="#1a2838" opacity="0.55"/>
+    <text x="1161" y="587" class="label" text-anchor="middle" font-size="13" fill="rgba(200,212,232,0.72)">ons huis</text>
+  </g>
+</svg>
