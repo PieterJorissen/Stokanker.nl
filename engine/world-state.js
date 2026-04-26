@@ -2,10 +2,10 @@ import { nlNow, isoDate, timeStr, season, isWeekend, dayKey, buildingDayKey, inR
 
 export async function buildWorldState() {
   const [ships, buildings, npcs, events] = await Promise.all([
-    fetch('/data/ships.json').then(r => r.json()),
-    fetch('/data/buildings.json').then(r => r.json()),
-    fetch('/data/npcs.json').then(r => r.json()),
-    fetch('/data/events.json').then(r => r.json()),
+    fetch('./data/ships.json').then(r => r.json()),
+    fetch('./data/buildings.json').then(r => r.json()),
+    fetch('./data/npcs.json').then(r => r.json()),
+    fetch('./data/events.json').then(r => r.json()),
   ]);
 
   const now     = nlNow();
