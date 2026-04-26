@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <style>text.label { font-family: Georgia, serif; pointer-events: none; }</style>
+  <g id="schuur-complex" transform="translate(721, -572) scale(0.262, 1.552)">
+    <rect x="1048" y="660" width="225" height="58" fill="#7a6638" opacity="0.68"/>
+    <line x1="1123" y1="660" x2="1123" y2="718" stroke="#5e4e28" stroke-width="2"/>
+    <line x1="1198" y1="660" x2="1198" y2="718" stroke="#5e4e28" stroke-width="2"/>
+    <rect x="1055" y="664" width="60" height="50" fill="#8a7040" opacity="0.45"/>
+    <rect x="1130" y="664" width="60" height="50" fill="#7a6030" opacity="0.38"/>
+    <rect x="1205" y="664" width="58" height="50" fill="#7a6030" opacity="0.28"/>
+    <text x="1161" y="650" class="label" text-anchor="middle" font-size="8" fill="rgba(200,178,135,0.45)" letter-spacing="2">schuur · archief · vriezer</text>
+  </g>
+</svg>

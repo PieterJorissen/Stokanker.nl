@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <style>text.label { font-family: Georgia, serif; pointer-events: none; }</style>
+  <g id="fabriek" class="zone" transform="translate(244, 72) scale(0.845, 0.878)">
+    <rect x="58" y="455" width="290" height="205" rx="2" fill="#0a0808" opacity="0.22" transform="translate(5,5)"/>
+    <rect x="58"  y="455" width="200" height="205" fill="#a83018"/>
+    <rect x="58"  y="455" width="200" height="205" fill="#c04028" opacity="0.65"/>
+    <line x1="58"  y1="457" x2="258" y2="457" stroke="#882010" stroke-width="3"/>
+    <line x1="58"  y1="555" x2="258" y2="555" stroke="#982818" stroke-width="2.5" opacity="0.55"/>
+    <rect x="258" y="495" width="90"  height="165" fill="#b83020"/>
+    <rect x="258" y="495" width="90"  height="165" fill="#c83828" opacity="0.55"/>
+    <line x1="258" y1="497" x2="348" y2="497" stroke="#882010" stroke-width="2.5"/>
+    <line x1="258" y1="576" x2="348" y2="576" stroke="#982818" stroke-width="2"   opacity="0.5"/>
+    <line x1="258" y1="495" x2="258" y2="660" stroke="#881808" stroke-width="2"/>
+    <text x="163" y="542" class="label" text-anchor="middle" font-size="13" fill="rgba(255,215,195,0.72)">de fabriek</text>
+  </g>
+</svg>

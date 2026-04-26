@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <style>text.label { font-family: Georgia, serif; pointer-events: none; }</style>
+  <g id="romney-loods" class="zone" transform="translate(319, 292) scale(0.613, 0.407)">
+    <rect x="356" y="462" width="442" height="172" rx="2" fill="#080e04" opacity="0.39" transform="translate(5,5)"/>
+    <rect x="356" y="462" width="442" height="172" fill="#cfe0c1"/>
+    <rect x="356" y="462" width="442" height="172" fill="#7cc769" opacity="0.26"/>
+    <rect x="356" y="462" width="2"   height="172" fill="#2a4818"/>
+    <rect x="368" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="381" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="393" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="405" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="417" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="430" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="442" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="454" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="467" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="479" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="491" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="503" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="516" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="528" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="540" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="552" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="565" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="577" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="589" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="602" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="614" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="626" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="638" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="651" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="663" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="675" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="688" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="700" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="712" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="724" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="737" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="749" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="761" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="773" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="786" y="462" width="1" height="172" fill="#2a4818" opacity="0.30"/>
+    <rect x="798" y="462" width="2"   height="172" fill="#2a4818"/>
+    <rect x="368" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="368" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="393" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="393" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="417" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="417" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="442" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="442" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="479" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="479" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="503" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="503" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="528" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="528" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="565" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="565" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="589" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="589" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="614" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="614" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="638" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="638" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="675" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="675" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="700" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="700" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="724" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="724" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="749" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="749" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="773" y="491" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="773" y="563" width="12" height="42" fill="#77996b" opacity="0.70" rx="1"/>
+    <rect x="790" y="493" width="10" height="141" fill="#182e10" opacity="0.88"/>
+    <text x="577" y="553" class="label" text-anchor="middle" font-size="13" fill="rgba(195,238,170,0.78)">de romneyloods</text>
+  </g>
+</svg>

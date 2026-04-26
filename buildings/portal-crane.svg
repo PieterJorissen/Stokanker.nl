@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <defs>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="3" dy="4" stdDeviation="4" flood-color="#0a0808" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g id="portal-crane" class="zone" transform="translate(317, 10)">
+    <line x1="234" y1="249" x2="234" y2="510" stroke="#807858" stroke-width="2.5" stroke-dasharray="9,7" opacity="0.42"/>
+    <line x1="378" y1="249" x2="378" y2="510" stroke="#807858" stroke-width="2.5" stroke-dasharray="9,7" opacity="0.42"/>
+    <rect x="226" y="257" width="14" height="195" fill="#c06818" filter="url(#soft-shadow)"/>
+    <rect x="372" y="257" width="14" height="195" fill="#c06818" filter="url(#soft-shadow)"/>
+    <rect x="226" y="257" width="160" height="17" fill="#e07828" filter="url(#soft-shadow)"/>
+    <rect x="274" y="250" width="46" height="20" fill="#f08830"/>
+    <rect x="283" y="247" width="28" height="11" fill="#f09840"/>
+    <line x1="297" y1="270" x2="297" y2="310" stroke="#706848" stroke-width="2" opacity="0.65"/>
+    <title>American Hoist &amp; Derrick — Marshall Plan</title>
+  </g>
+</svg>
