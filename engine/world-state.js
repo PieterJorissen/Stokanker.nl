@@ -24,7 +24,8 @@ export async function buildWorldState() {
     .filter(b => {
       if (isHoliday)                         return false;
       if (b['closed-dates'].includes(today)) return false;
-      return inRange(time, b.hours?.[bDay]);
+      if (b.hours === null)                  return true;
+      return inRange(time, b.hours[bDay]);
     })
     .map(b => b.id);
 
