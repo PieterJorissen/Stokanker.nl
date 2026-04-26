@@ -1,0 +1,59 @@
+fieldset {
+    padding: 5px 8px 8px;
+    border: 1px solid var(--main-text-color);
+    box-shadow: 2px 3px 3px var(--sub-text-color), inset 3px 4px 4px var(--sub-highlight-color);
+    background: linear-gradient(135deg, var(--main-bg-color), 95%, var(--sub-highlight-color));
+
+    fieldset {
+        padding: 3px 6px 8px;
+        margin-bottom: 4px;
+        background: var(--main-bg-color);
+        box-shadow: none;
+
+        legend {
+            font-weight: 500;
+        }
+    }
+}
+
+legend {
+    color: var(--main-heading-color);
+    font-weight: 600;
+}
+
+fieldset.collapsable {
+    height: 28px;
+    overflow: clip;
+
+    *:not(:first-child) {
+        pointer-events: none;
+        opacity: 0;
+    }
+
+    >legend {
+        position: relative;
+        cursor: pointer;
+        line-height: initial;
+        width: 100%;
+
+        .icon {
+            position: absolute;
+            right: 3px;
+            stroke: var(--main-heading-color);
+            transition: transform 0.3s;
+        }
+    }
+
+    &.open {
+        height: max-content;
+
+        .icon {
+            transform: rotate(180deg);
+        }
+
+        *:not(:first-child) {
+            pointer-events: all;
+            opacity: 1;
+        }
+    }
+}
