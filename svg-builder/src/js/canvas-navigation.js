@@ -25,14 +25,21 @@ function initCanvasNavigation() {
 }
 
 function resetViewBox() {
-    const { x, y, width, height } = drawingContent.getBBox();
+    const svgRect = svg.getBoundingClientRect();
+    const dcRect = drawingContent.getBoundingClientRect();
 
-    if (width === 0 && height === 0) {
-        const rect = svg.getBoundingClientRect();
-        vb = { x: 0, y: 0, w: rect.width || 500, h: rect.height || 500 };
+    if (dcRect.width === 0 && dcRect.height === 0) {
+        vb = { x: 0, y: 0, w: svgRect.width || 500, h: svgRect.height || 500 };
     } else {
-        const padding = Math.max(width, height) * 0.15;
-        vb = { x: x - padding, y: y - padding, w: width + padding * 2, h: height + padding * 2 };
+        // Convert screen-space rect to SVG viewBox space (accounts for all transforms)
+        const scaleX = vb.w / svgRect.width;
+        const scaleY = vb.h / svgRect.height;
+        const x = vb.x + (dcRect.left - svgRect.left) * scaleX;
+        const y = vb.y + (dcRect.top - svgRect.top) * scaleY;
+        const w = dcRect.width * scaleX;
+        const h = dcRect.height * scaleY;
+        const padding = Math.max(w, h) * 0.12;
+        vb = { x: x - padding, y: y - padding, w: w + padding * 2, h: h + padding * 2 };
     }
 
     applyViewBox();
