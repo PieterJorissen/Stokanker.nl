@@ -13,6 +13,24 @@ input {
         width: 100%;
         border-radius: 5px;
         margin: 8px 0;
+
+        &::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--main-highlight-color);
+            cursor: pointer;
+        }
+
+        &::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--main-highlight-color);
+            border: 0;
+            cursor: pointer;
+        }
     }
 
     &[type="radio"] {

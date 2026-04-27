@@ -45,15 +45,54 @@ header {
     height: calc(100% - var(--tab-links-total-height));
     width: 100%;
     display: grid;
-    grid-template-columns: 12rem auto;
+    grid-template-columns: var(--sidebar-width) 1fr;
     grid-template-rows: 1fr;
     grid-template-areas:
         "leftSidebar center"
         ". center"
     ;
+    transition: grid-template-columns 0.25s ease;
 
     &.active {
         z-index: 1;
         opacity: 1;
     }
+}
+
+body.sidebar-collapsed .tab-content {
+    grid-template-columns: 0 1fr;
+}
+
+body.sidebar-collapsed #left-sidebar {
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#left-sidebar {
+    transition: opacity 0.2s ease;
+}
+
+#sidebar-toggle {
+    position: absolute;
+    top: calc(var(--tab-links-total-height) + 4px);
+    left: calc(var(--sidebar-width) + 2px);
+    z-index: 10;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    margin: 0;
+    background: var(--tab-links-bg-color);
+    border: 1px solid var(--main-text-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: left 0.25s ease;
+
+    svg {
+        display: block;
+    }
+}
+
+body.sidebar-collapsed #sidebar-toggle {
+    left: 4px;
 }
