@@ -25,23 +25,46 @@ function initCanvasNavigation() {
 }
 
 function resetViewBox() {
-    const svgRect = svg.getBoundingClientRect();
-    const dcRect = drawingContent.getBoundingClientRect();
+    const bbox = drawingContent.getBBox();
 
-    if (dcRect.width === 0 && dcRect.height === 0) {
+    if (bbox.width === 0 && bbox.height === 0) {
+        const svgRect = svg.getBoundingClientRect();
         vb = { x: 0, y: 0, w: svgRect.width || 500, h: svgRect.height || 500 };
-    } else {
-        // Convert screen-space rect to SVG viewBox space (accounts for all transforms)
-        const scaleX = vb.w / svgRect.width;
-        const scaleY = vb.h / svgRect.height;
-        const x = vb.x + (dcRect.left - svgRect.left) * scaleX;
-        const y = vb.y + (dcRect.top - svgRect.top) * scaleY;
-        const w = dcRect.width * scaleX;
-        const h = dcRect.height * scaleY;
-        const padding = Math.max(w, h) * 0.12;
-        vb = { x: x - padding, y: y - padding, w: w + padding * 2, h: h + padding * 2 };
+        applyViewBox();
+        return;
     }
 
+    // getCTM maps drawingContent local coords → SVG viewport pixels, including its transform attr.
+    // Transforming the 4 bbox corners (not just width/height) correctly handles rotation.
+    const ctm = drawingContent.getCTM();
+    const svgRect = svg.getBoundingClientRect();
+
+    const toVB = (px, py) => {
+        const pt = svg.createSVGPoint();
+        pt.x = px; pt.y = py;
+        const vp = pt.matrixTransform(ctm);
+        return {
+            x: vb.x + (vp.x / svgRect.width) * vb.w,
+            y: vb.y + (vp.y / svgRect.height) * vb.h,
+        };
+    };
+
+    const corners = [
+        toVB(bbox.x,              bbox.y),
+        toVB(bbox.x + bbox.width, bbox.y),
+        toVB(bbox.x,              bbox.y + bbox.height),
+        toVB(bbox.x + bbox.width, bbox.y + bbox.height),
+    ];
+
+    const xs = corners.map(p => p.x);
+    const ys = corners.map(p => p.y);
+    const x = Math.min(...xs);
+    const y = Math.min(...ys);
+    const w = Math.max(...xs) - x;
+    const h = Math.max(...ys) - y;
+    const padding = Math.max(w, h) * 0.12;
+
+    vb = { x: x - padding, y: y - padding, w: w + padding * 2, h: h + padding * 2 };
     applyViewBox();
 }
 
