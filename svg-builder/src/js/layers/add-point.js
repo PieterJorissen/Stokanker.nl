@@ -24,7 +24,7 @@ export default function addPoint(event) {
         ? controlPointContainer.lastElementChild
         : controlPointContainer.firstElementChild;
 
-    createdPoint.dispatchEvent(new Event('pointerdown'));
+    createdPoint.dispatchEvent(new PointerEvent('pointerdown', { bubbles: false }));
 
     styleLayer(session.layerId);
     drawLayer(session.layerId);

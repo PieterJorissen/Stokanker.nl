@@ -17,7 +17,6 @@ import {
     undoBtn,
     redoBtn,
 } from './dom-selections.js';
-import changeBackgroundGridSize from './change-background-grid-size.js';
 import {
     centerViewBox,
     configOutput,
@@ -64,6 +63,7 @@ import {
 } from './underlay-handling.js';
 import drawing from './drawing/drawing.js';
 import { defaults } from './constants.js';
+import { initCanvasNavigation, isHandModeActive, resetViewBox } from './canvas-navigation.js';
 
 // FIXME Fill and Stroke config isnt properly synced; is transforms? no-layer-msg2 sometimes shows when it shouldnt...
 
@@ -99,7 +99,6 @@ modesForm.addEventListener('change', setMode);
 outputConfig.addEventListener('input', configOutput);
 pathClosingToggle.addEventListener('change', togglePathClosing);
 redoBtn.addEventListener('click', redo);
-svg.addEventListener('wheel', changeBackgroundGridSize);
 svg.addEventListener('pointerdown', addPoint);
 transformsForm.addEventListener('input', setTransform);
 transformsForm.addEventListener('change', () => save('setTransform'));
@@ -109,7 +108,17 @@ window.addEventListener('keydown', pressKey);
 window.addEventListener('keyup', arrowKeyup);
 window.addEventListener('DOMContentLoaded', initializeSession, { once: true });
 window.addEventListener('DOMContentLoaded', initializeCanvas, { once: true });
+window.addEventListener('DOMContentLoaded', initCanvasNavigation, { once: true });
 window.addEventListener('submit', (event) => event.preventDefault());
+
+document.getElementById('sidebar-toggle')
+    .addEventListener('click', () => document.body.classList.toggle('sidebar-collapsed'));
+
+document.getElementById('fit-view-btn').addEventListener('click', resetViewBox);
+
+document.getElementById('pan-mode-toggle').addEventListener('change', (e) => {
+    svg.style.cursor = e.target.checked ? 'grab' : '';
+});
 
 document.getElementById('underlay-upload').addEventListener('change', handleUnderlayUpload);
 document.getElementById('underlay-opacity').addEventListener('input', handleUnderlayOpacity);
