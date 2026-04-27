@@ -329,6 +329,10 @@ async function startDialogue(buildingId) {
     }, null);
     return;
   }
+  for (const unlock of unlocks) {
+    if (unlock.grants?.nodes?.[buildingId]) tree.entry = unlock.grants.nodes[buildingId];
+  }
+
   currentDialogue = new Dialogue(tree, state, flags, closeDialogue);
   document.getElementById('dialogue').removeAttribute('hidden');
   currentDialogue.start();

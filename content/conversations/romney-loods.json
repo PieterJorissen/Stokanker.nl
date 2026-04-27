@@ -17,7 +17,7 @@
     "anchors": {
       "type": "npc",
       "flag": "talked:jan-anchors",
-      "text": "Delta, fisherman, a few Bruce copies. Some going back thirty years. All worked.",
+      "text": "Delta, fisherman, a few Bruce copies. Some going back thirty years. All worked. There's a Delta 25 in the back I haven't gotten around to listing.",
       "choices": [
         { "label": "Anything for sale?",  "next": "sale-gate" },
         { "label": "Thanks.",             "next": "end" }
@@ -49,6 +49,40 @@
       "filter": { "location": "romney-loods" },
       "fallback": "Nothing listed right now. Ask anyway.",
       "choices": [{ "label": "Thanks.", "next": "end" }]
+    },
+    "jan-anchor-interest": {
+      "type": "npc",
+      "flag": "talked:jan-anchor-return",
+      "text": "Back. If it's the Delta 25 — it's still there.",
+      "choices": [
+        { "label": "Show me.",                    "next": "anchor-delta-25" },
+        { "label": "What are you asking for it?", "next": "anchor-price" },
+        { "label": "Not today.",                  "next": "end" }
+      ]
+    },
+    "anchor-delta-25": {
+      "type": "narrate",
+      "flag": "viewed:delta-25",
+      "text": "He leads you to the back. Delta 25, paint worn but steel sound. Heavy. Clean flukes.",
+      "choices": [
+        { "label": "What are you asking?", "next": "anchor-price" },
+        { "label": "I'll think about it.", "next": "end" }
+      ]
+    },
+    "anchor-price": {
+      "type": "npc",
+      "flag": "talked:jan-anchor-price",
+      "text": "Two-fifty. It held a Westerly for twelve years. Make an offer if that's too steep.",
+      "choices": [
+        { "label": "I'll think about it.", "next": "end" },
+        { "label": "I'll take it.",        "next": "anchor-sold" }
+      ]
+    },
+    "anchor-sold": {
+      "type": "npc",
+      "flag": "talked:jan-anchor-sold",
+      "text": "Good. Cash or transfer. Come back with a vehicle — it's not light.",
+      "choices": [{ "label": "Done.", "next": "end" }]
     }
   }
 }

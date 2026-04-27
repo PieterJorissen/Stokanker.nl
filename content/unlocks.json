@@ -1,3 +1,14 @@
 {
-  "unlocks": []
+  "unlocks": [
+    {
+      "id": "jan-anchor-interest",
+      "requires": ["talked:jan-anchors"],
+      "any": [],
+      "grants": {
+        "narrator": null,
+        "nodes": { "romney-loods": "jan-anchor-interest" },
+        "flags": []
+      }
+    }
+  ]
 }
