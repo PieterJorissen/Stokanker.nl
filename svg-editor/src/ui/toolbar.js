@@ -1,15 +1,14 @@
 // Toolbar — mode buttons, file operations, view controls.
 
-import { state, emit, emitDoc, emitMode, emitViewport, emitUnderlay } from '../model/state.js';
+import { doc, editor, emit, emitDoc, emitMode, emitViewport, emitUnderlay } from '../model/state.js';
 import { fromString, serialize, defaultDocument, createNode, findById, findParent } from '../model/node.js';
 
 let _modeButtons = null;
 
 export function init() {
   _modeButtons = document.querySelectorAll('.mode-btn');
-
   _modeButtons.forEach(btn => {
-    btn.addEventListener('click', () => setModeIfAllowed(btn.dataset.mode));
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
   });
 
   document.getElementById('btn-new').addEventListener('click', onNew);
@@ -29,7 +28,7 @@ export function init() {
   document.getElementById('underlay-file').addEventListener('change', onUnderlayFile);
   document.getElementById('underlay-opacity').addEventListener('input', onUnderlayOpacity);
   document.getElementById('btn-clear-underlay').addEventListener('click', () => {
-    state.underlay = null; emitUnderlay();
+    editor.underlay = null; emitUnderlay();
   });
   document.getElementById('btn-underlay-done').addEventListener('click', () =>
     document.getElementById('underlay-dialog').close());
@@ -43,17 +42,17 @@ export function init() {
 
 export function syncModeButtons() {
   _modeButtons?.forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.mode === state.mode));
+    btn.classList.toggle('active', btn.dataset.mode === editor.mode));
 }
 
 // --- File ---
 
 function onNew() {
   if (!confirm('New document? Unsaved changes will be lost.')) return;
-  state.root = defaultDocument();
-  state.selectedId = null;
-  state.selectedCmdIdx = null;
-  state.mode = 'select';
+  doc.root = defaultDocument();
+  editor.selectedId = null;
+  editor.selectedCmdIdx = null;
+  editor.mode = 'select';
   emitDoc();
   emitMode();
 }
@@ -81,10 +80,10 @@ function onPasteLoad() {
 
 function loadSVGString(src) {
   try {
-    state.root = fromString(src);
-    state.selectedId = null;
-    state.selectedCmdIdx = null;
-    state.mode = 'select';
+    doc.root = fromString(src);
+    editor.selectedId = null;
+    editor.selectedCmdIdx = null;
+    editor.mode = 'select';
     emitDoc();
     emitMode();
     onFitView();
@@ -106,38 +105,28 @@ function onCopySVG() {
 function onDownload() {
   const text = buildExportString();
   const blob = new Blob([text], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
   a.href = url; a.download = 'drawing.svg'; a.click();
   URL.revokeObjectURL(url);
 }
 
 function buildExportString() {
-  let root = state.root;
+  let root = doc.root;
 
-  // Optionally embed underlay as <image> element
-  if (state.underlay?.includeInExport && state.underlay.dataUrl) {
+  if (editor.underlay?.includeInExport && editor.underlay.dataUrl) {
     const imgNode = createNode('image', {
-      href: state.underlay.dataUrl,
+      href: editor.underlay.dataUrl,
       x: '0', y: '0',
-      width: root.attrs.viewBox?.split(/[\s,]+/)[2] ?? '100%',
+      width:  root.attrs.viewBox?.split(/[\s,]+/)[2] ?? '100%',
       height: root.attrs.viewBox?.split(/[\s,]+/)[3] ?? '100%',
-      opacity: String(state.underlay.opacity),
+      opacity: String(editor.underlay.opacity),
       preserveAspectRatio: 'xMidYMid meet',
     });
-    root = {
-      ...root,
-      attrs: { ...root.attrs },
-      children: [imgNode, ...root.children],
-    };
+    root = { ...root, attrs: { ...root.attrs }, children: [imgNode, ...root.children] };
   }
 
-  // Ensure xmlns on root
-  const exportRoot = {
-    ...root,
-    attrs: { xmlns: 'http://www.w3.org/2000/svg', ...root.attrs },
-  };
-
+  const exportRoot = { ...root, attrs: { xmlns: 'http://www.w3.org/2000/svg', ...root.attrs } };
   return '<?xml version="1.0" encoding="UTF-8"?>\n' + serialize(exportRoot);
 }
 
@@ -145,14 +134,14 @@ function buildExportString() {
 
 export function onFitView() {
   const docGroup = document.getElementById('doc');
-  const canvas = document.getElementById('canvas');
+  const canvas   = document.getElementById('canvas');
   if (!docGroup || !canvas) return;
 
   let bbox = null;
   try { bbox = docGroup.getBBox(); } catch { /* ignore */ }
 
   if (!bbox || (bbox.width === 0 && bbox.height === 0)) {
-    const vbStr = state.root?.attrs?.viewBox;
+    const vbStr = doc.root?.attrs?.viewBox;
     if (vbStr) {
       const parts = vbStr.trim().split(/[\s,]+/).map(Number);
       if (parts.length === 4 && parts[2] && parts[3]) {
@@ -163,23 +152,23 @@ export function onFitView() {
 
   if (!bbox?.width || !bbox?.height) return;
 
-  const cw = canvas.clientWidth || canvas.getBoundingClientRect().width;
+  const cw = canvas.clientWidth  || canvas.getBoundingClientRect().width;
   const ch = canvas.clientHeight || canvas.getBoundingClientRect().height;
   if (!cw || !ch) return;
 
   const zoom = Math.min(cw / bbox.width, ch / bbox.height) * 0.88;
-  const x = bbox.x - (cw / zoom - bbox.width) / 2;
+  const x = bbox.x - (cw / zoom - bbox.width)  / 2;
   const y = bbox.y - (ch / zoom - bbox.height) / 2;
-  state.viewport = { x, y, zoom };
+  editor.viewport = { x, y, zoom };
   emitViewport();
 }
 
 // --- Underlay ---
 
 function onUnderlayOpen() {
-  document.getElementById('underlay-opacity').value = state.underlay?.opacity ?? 0.4;
+  document.getElementById('underlay-opacity').value = editor.underlay?.opacity ?? 0.4;
   document.getElementById('underlay-opacity-val').textContent =
-    Number(state.underlay?.opacity ?? 0.4).toFixed(2);
+    Number(editor.underlay?.opacity ?? 0.4).toFixed(2);
   document.getElementById('underlay-dialog').showModal();
 }
 
@@ -188,7 +177,7 @@ function onUnderlayFile(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    state.underlay = {
+    editor.underlay = {
       dataUrl: ev.target.result,
       opacity: parseFloat(document.getElementById('underlay-opacity').value),
       includeInExport: document.getElementById('underlay-include').checked,
@@ -201,29 +190,29 @@ function onUnderlayFile(e) {
 function onUnderlayOpacity(e) {
   const v = parseFloat(e.target.value);
   document.getElementById('underlay-opacity-val').textContent = v.toFixed(2);
-  if (state.underlay) { state.underlay.opacity = v; emitUnderlay(); }
+  if (editor.underlay) { editor.underlay.opacity = v; emitUnderlay(); }
 }
 
 // --- Node tree operations ---
 
 function onAddNode() {
-  const tag = document.getElementById('add-tag-select').value;
-  const parentId = state.selectedId ?? state.root._id;
-  const parent = findById(state.root, parentId);
+  const tag      = document.getElementById('add-tag-select').value;
+  const parentId = editor.selectedId ?? doc.root._id;
+  const parent   = findById(doc.root, parentId);
   if (!parent || parent.tag === '#text') return;
 
   const newNode = createNode(tag, defaultAttrsForTag(tag));
   parent.children.push(newNode);
-  state.selectedId = newNode._id;
-  state.selectedCmdIdx = null;
+  editor.selectedId = newNode._id;
+  editor.selectedCmdIdx = null;
   emitDoc();
 }
 
 function onMoveNode(dir) {
-  if (!state.selectedId || state.selectedId === state.root._id) return;
-  const parent = findParent(state.root, state.selectedId);
+  if (!editor.selectedId || editor.selectedId === doc.root._id) return;
+  const parent = findParent(doc.root, editor.selectedId);
   if (!parent) return;
-  const i = parent.children.findIndex(c => c._id === state.selectedId);
+  const i = parent.children.findIndex(c => c._id === editor.selectedId);
   const j = i + dir;
   if (j < 0 || j >= parent.children.length) return;
   [parent.children[i], parent.children[j]] = [parent.children[j], parent.children[i]];
@@ -231,12 +220,12 @@ function onMoveNode(dir) {
 }
 
 function onDelete() {
-  if (!state.selectedId || state.selectedId === state.root._id) return;
-  const parent = findParent(state.root, state.selectedId);
+  if (!editor.selectedId || editor.selectedId === doc.root._id) return;
+  const parent = findParent(doc.root, editor.selectedId);
   if (!parent) return;
-  parent.children = parent.children.filter(c => c._id !== state.selectedId);
-  state.selectedId = null;
-  state.selectedCmdIdx = null;
+  parent.children = parent.children.filter(c => c._id !== editor.selectedId);
+  editor.selectedId = null;
+  editor.selectedCmdIdx = null;
   emitDoc();
   emit('select');
 }
@@ -245,24 +234,19 @@ function onDelete() {
 
 function onKeyDown(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-  if (e.key === 's') setModeIfAllowed('select');
-  if (e.key === 'e') setModeIfAllowed('path-edit');
-  if (e.key === 'd') setModeIfAllowed('draw');
+  if (e.key === 's' || e.key === 'S') setMode('select');
+  if (e.key === 'd') setMode('draw');
   if (e.key === 'f' || e.key === 'F') onFitView();
   if (e.key === 'Delete' || e.key === 'Backspace') onDelete();
   if (e.key === 'Escape') {
-    if (state.mode === 'draw') { emit('draw-cancel'); state.mode = 'select'; emitMode(); }
-    else { state.selectedId = null; state.selectedCmdIdx = null; emit('select'); }
+    if (editor.mode === 'draw') { emit('draw-cancel'); editor.mode = 'select'; emitMode(); }
+    else { editor.selectedId = null; editor.selectedCmdIdx = null; emit('select'); }
   }
 }
 
-function setModeIfAllowed(mode) {
-  if (mode === state.mode) return;
-  if (mode === 'path-edit') {
-    const node = state.selectedId ? findById(state.root, state.selectedId) : null;
-    if (!node || node.tag !== 'path') return;
-  }
-  state.mode = mode;
+function setMode(mode) {
+  if (mode === editor.mode) return;
+  editor.mode = mode;
   emitMode();
 }
 

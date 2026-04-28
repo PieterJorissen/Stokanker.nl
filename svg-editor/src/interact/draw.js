@@ -2,7 +2,7 @@
 // Creates a new path node in the document on first click.
 // The path is a live document node — the document IS the source of truth during drawing.
 
-import { state, emit, emitDoc, emitMode } from '../model/state.js';
+import { doc, editor, emit, emitDoc, emitMode } from '../model/state.js';
 import { createNode, findById, findParent } from '../model/node.js';
 import { parseD, serializeD, computePositions } from '../model/path.js';
 
@@ -19,7 +19,7 @@ export function startDraw() {
 /** Cancel and remove the current draw path (Escape handler). */
 export function cancelDraw() {
   if (_drawNodeId !== null) {
-    const parent = findParent(state.root, _drawNodeId);
+    const parent = findParent(doc.root, _drawNodeId);
     if (parent) {
       parent.children = parent.children.filter(c => c._id !== _drawNodeId);
     }
@@ -38,7 +38,6 @@ export function finishDraw() {
 
 export const handler = {
   onDown(e, docPos) {
-    // Right-click or long-press finishes the path
     if (e.button === 2) {
       finishDrawAndSwitch();
       return;
@@ -50,20 +49,18 @@ export const handler = {
     if (e.button !== 0) return;
 
     if (_drawNodeId === null) {
-      // First click: create the path node
       createDrawPath(docPos);
     } else {
       appendPoint(docPos);
     }
   },
 
-  onMove(e, docPos, delta) {
+  onMove(e, docPos) {
     _previewDocPos = docPos;
-    emit('overlay'); // lightweight: only redraws the overlay (preview line)
+    emit('overlay');
   },
 
   onDragEnd(e, docPos) {
-    // Drag in draw mode just moves — end of drag still appends a point
     if (_drawNodeId === null) {
       createDrawPath(docPos);
     } else {
@@ -71,23 +68,22 @@ export const handler = {
     }
   },
 
-  onContextMenu(e, docPos) {
+  onContextMenu(e) {
     e.preventDefault?.();
     finishDrawAndSwitch();
   },
 
-  onLongPress(e, docPos) {
+  onLongPress() {
     finishDrawAndSwitch();
   },
 };
 
 function createDrawPath(docPos) {
-  // Find best parent: selected group, or document root
-  const parentId = state.selectedId ?? state.root._id;
-  const parent = findById(state.root, parentId);
+  const parentId = editor.selectedId ?? doc.root._id;
+  const parent = findById(doc.root, parentId);
   const target = (parent && parent.tag !== '#text' && parent.tag !== 'path')
     ? parent
-    : state.root;
+    : doc.root;
 
   const newPath = createNode('path', {
     d: `M ${fmt(docPos.x)} ${fmt(docPos.y)}`,
@@ -98,22 +94,21 @@ function createDrawPath(docPos) {
 
   target.children.push(newPath);
   _drawNodeId = newPath._id;
-  state.selectedId = newPath._id;
-  state.selectedCmdIdx = 0;
+  editor.selectedId = newPath._id;
+  editor.selectedCmdIdx = 0;
   emitDoc();
 }
 
 function appendPoint(docPos) {
   if (_drawNodeId === null) return;
 
-  const node = findById(state.root, _drawNodeId);
+  const node = findById(doc.root, _drawNodeId);
   if (!node) { _drawNodeId = null; return; }
 
   const cmds = parseD(node.attrs.d || '');
-  const letter = 'L';
-  cmds.push(buildCmd(letter, docPos, cmds));
+  cmds.push(buildCmd('L', docPos, cmds));
   node.attrs.d = serializeD(cmds);
-  state.selectedCmdIdx = cmds.length - 1;
+  editor.selectedCmdIdx = cmds.length - 1;
   emitDoc();
 }
 
@@ -153,7 +148,7 @@ function buildCmd(letter, docPos, cmds) {
 
 function finishDrawAndSwitch() {
   finishDraw();
-  state.mode = 'select';
+  editor.mode = 'select';
   emitMode();
 }
 
@@ -170,5 +165,5 @@ export function getDrawNodeId() {
 function fmt(n) {
   if (!isFinite(n)) return 0;
   const s = n.toFixed(2);
-  return parseFloat(s); // removes trailing zeros
+  return parseFloat(s);
 }
