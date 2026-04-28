@@ -1,5 +1,5 @@
 // Path-edit mode — drag anchor points and control handles to edit path commands.
-// Operates entirely through path command args; never stores extra geometry state.
+// Operates entirely through named path command props; never stores extra geometry state.
 
 import { state, emit, emitDoc } from '../model/state.js';
 import { findById } from '../model/node.js';
@@ -10,10 +10,11 @@ let _dragging = null;
 //   type: 'anchor' | 'handle',
 //   cmdIdx: number,
 //   cpIdx: number (handles only),
-//   letter: string,
-//   startArgs: number[],
+//   cmds: PathCommand[],
+//   node: SvgNode,
 //   startDocX: number,
 //   startDocY: number,
+//   startProps: { ...cmd } (snapshot of named props),
 // }
 
 export const handler = {
@@ -25,7 +26,6 @@ export const handler = {
     const cpIdx  = target.dataset.cp  !== undefined ? parseInt(target.dataset.cp)  : null;
 
     if (cmdIdx === null) {
-      // Click on empty canvas area in path-edit mode: deselect command
       state.selectedCmdIdx = null;
       emit('select');
       return;
@@ -53,57 +53,57 @@ export const handler = {
       node,
       startDocX: docPos.x,
       startDocY: docPos.y,
-      startArgs: [...cmds[cmdIdx].args],
+      startProps: { ...cmds[cmdIdx] },
     };
   },
 
-  onMove(e, docPos, delta) {
+  onMove(e, docPos) {
     if (!_dragging) return;
 
     const { type, cmdIdx, cpIdx, cmds, node } = _dragging;
     const cmd = cmds[cmdIdx];
     const L = cmd.letter.toUpperCase();
-    const rel = cmd.letter !== L;
-
     const dx = docPos.x - _dragging.startDocX;
     const dy = docPos.y - _dragging.startDocY;
-    const orig = _dragging.startArgs;
+    const orig = _dragging.startProps;
 
     if (type === 'anchor') {
-      // Move the endpoint args
       if (L === 'M' || L === 'L' || L === 'T') {
-        cmd.args[0] = orig[0] + dx;
-        cmd.args[1] = orig[1] + dy;
+        cmd.x = orig.x + dx;
+        cmd.y = orig.y + dy;
       } else if (L === 'H') {
-        cmd.args[0] = orig[0] + dx;
+        cmd.x = orig.x + dx;
       } else if (L === 'V') {
-        cmd.args[0] = orig[0] + dy;
+        cmd.y = orig.y + dy;
       } else if (L === 'C') {
-        cmd.args[4] = orig[4] + dx;
-        cmd.args[5] = orig[5] + dy;
+        cmd.x = orig.x + dx;
+        cmd.y = orig.y + dy;
       } else if (L === 'S') {
-        cmd.args[2] = orig[2] + dx;
-        cmd.args[3] = orig[3] + dy;
+        cmd.x = orig.x + dx;
+        cmd.y = orig.y + dy;
       } else if (L === 'Q') {
-        cmd.args[2] = orig[2] + dx;
-        cmd.args[3] = orig[3] + dy;
+        cmd.x = orig.x + dx;
+        cmd.y = orig.y + dy;
       } else if (L === 'A') {
-        cmd.args[5] = orig[5] + dx;
-        cmd.args[6] = orig[6] + dy;
+        cmd.x = orig.x + dx;
+        cmd.y = orig.y + dy;
       }
     } else {
       // Move a control point
       if (L === 'C') {
         if (cpIdx === 0) {
-          cmd.args[0] = orig[0] + dx;
-          cmd.args[1] = orig[1] + dy;
+          cmd.x1 = orig.x1 + dx;
+          cmd.y1 = orig.y1 + dy;
         } else {
-          cmd.args[2] = orig[2] + dx;
-          cmd.args[3] = orig[3] + dy;
+          cmd.x2 = orig.x2 + dx;
+          cmd.y2 = orig.y2 + dy;
         }
-      } else if (L === 'S' || L === 'Q') {
-        cmd.args[0] = orig[0] + dx;
-        cmd.args[1] = orig[1] + dy;
+      } else if (L === 'S') {
+        cmd.x2 = orig.x2 + dx;
+        cmd.y2 = orig.y2 + dy;
+      } else if (L === 'Q') {
+        cmd.x1 = orig.x1 + dx;
+        cmd.y1 = orig.y1 + dy;
       }
     }
 
@@ -111,16 +111,15 @@ export const handler = {
     emitDoc();
   },
 
-  onDragEnd(e, docPos) {
+  onDragEnd() {
     _dragging = null;
   },
 
-  onUp(e, docPos) {
+  onUp() {
     _dragging = null;
   },
 
-  onContextMenu(e, docPos) {
-    // Right-click in path-edit → switch back to select mode
+  onContextMenu() {
     state.mode = 'select';
     emit('mode');
   },

@@ -38,17 +38,11 @@ function init() {
     newNameInput: document.getElementById('attr-new-name'),
     newValInput:  document.getElementById('attr-new-val'),
     addAttrBtn:   document.getElementById('btn-add-attr'),
-    pathSection:  document.getElementById('path-cmds-section'),
-    pathCmdsList: document.getElementById('path-cmds-list'),
+    cmdAddRow:    document.getElementById('cmd-add-row'),
     newCmdType:   document.getElementById('new-cmd-type'),
     addCmdBtn:    document.getElementById('btn-add-cmd'),
   });
   Toolbar.init();
-
-  // Draw cmd type sync from selector
-  document.getElementById('new-cmd-type').addEventListener('change', e => {
-    state.drawCmdType = e.target.value;
-  });
 
   // Init canvas interaction
   const modeHandlers = {

@@ -1,31 +1,29 @@
 // Attribute editor panel — reflects the selected node's attributes.
-// Attribute names are used directly (no translation layer).
-// For path nodes in path-edit mode, also shows path commands.
+// In path-edit mode with a command selected, shows that command's named props
+// in the same panel — same UI, same mental model as element attributes.
 
 import { state, emit, emitDoc } from '../model/state.js';
 import { findById, setAttr, removeAttr } from '../model/node.js';
-import { parseD, serializeD, argLabels, defaultArgs, computePositions } from '../model/path.js';
+import { parseD, serializeD, defaultCmd, computePositions, KEYS } from '../model/path.js';
 
-let _attrList = null;
-let _tagLabel = null;
+let _attrList   = null;
+let _tagLabel   = null;
 let _newNameInput = null;
-let _newValInput = null;
-let _addAttrBtn = null;
-let _pathSection = null;
-let _pathCmdsList = null;
-let _newCmdType = null;
-let _addCmdBtn = null;
+let _newValInput  = null;
+let _addAttrBtn   = null;
+let _cmdAddRow    = null;
+let _newCmdType   = null;
+let _addCmdBtn    = null;
 
 export function init(els) {
-  _attrList = els.attrList;
-  _tagLabel = els.tagLabel;
+  _attrList     = els.attrList;
+  _tagLabel     = els.tagLabel;
   _newNameInput = els.newNameInput;
-  _newValInput = els.newValInput;
-  _addAttrBtn = els.addAttrBtn;
-  _pathSection = els.pathSection;
-  _pathCmdsList = els.pathCmdsList;
-  _newCmdType = els.newCmdType;
-  _addCmdBtn = els.addCmdBtn;
+  _newValInput  = els.newValInput;
+  _addAttrBtn   = els.addAttrBtn;
+  _cmdAddRow    = els.cmdAddRow;
+  _newCmdType   = els.newCmdType;
+  _addCmdBtn    = els.addCmdBtn;
 
   _addAttrBtn.addEventListener('click', onAddAttr);
   _newValInput.addEventListener('keydown', e => { if (e.key === 'Enter') onAddAttr(); });
@@ -41,30 +39,45 @@ export function renderAttrs() {
 
   if (!node) {
     _tagLabel.textContent = '';
-    _pathSection.hidden = true;
+    _cmdAddRow.hidden = true;
     return;
   }
 
-  _tagLabel.textContent = node.tag === '#text' ? '#text' : `<${node.tag}>`;
+  // Path-edit mode with a command selected → show command props as attributes
+  const inPathEdit = state.mode === 'path-edit' && node.tag === 'path';
+  const cmdSelected = inPathEdit && state.selectedCmdIdx !== null;
 
+  _cmdAddRow.hidden = !inPathEdit;
+
+  if (cmdSelected) {
+    const cmds = parseD(node.attrs.d || '');
+    const cmd = cmds[state.selectedCmdIdx];
+    if (cmd) {
+      _tagLabel.textContent = cmd.letter;
+      const keys = KEYS[cmd.letter] ?? [];
+      for (const key of keys) {
+        _attrList.appendChild(makeCmdPropRow(node, cmds, cmd, key));
+      }
+      // Delete-command button at bottom
+      _attrList.appendChild(makeDeleteCmdRow(node, cmds));
+      return;
+    }
+  }
+
+  // Default: show node tag + its attributes
   if (node.tag === '#text') {
+    _tagLabel.textContent = '#text';
     renderTextContent(node);
-    _pathSection.hidden = true;
     return;
   }
 
+  _tagLabel.textContent = `<${node.tag}>`;
   for (const [name, value] of Object.entries(node.attrs)) {
     _attrList.appendChild(makeAttrRow(node, name, value));
   }
-
-  // Path commands section — shown when a path is selected in path-edit mode
-  const isPath = node.tag === 'path';
-  const showCmds = isPath && state.mode === 'path-edit';
-  _pathSection.hidden = !showCmds;
-  if (showCmds) renderPathCmds(node);
 }
 
-// --- Attribute rows ---
+// --- Element attribute rows ---
 
 function makeAttrRow(node, name, value) {
   const row = document.createElement('div');
@@ -80,7 +93,6 @@ function makeAttrRow(node, name, value) {
   input.value = value;
   input.spellcheck = false;
 
-  // Commit on blur or Enter
   const commit = () => {
     const v = input.value;
     if (v === node.attrs[name]) return;
@@ -142,87 +154,61 @@ function onAddAttr() {
   emitDoc();
 }
 
-// --- Path commands ---
+// --- Path command prop rows (reuse attr-row styling) ---
 
-function renderPathCmds(node) {
-  _pathCmdsList.innerHTML = '';
-  const dVal = node.attrs.d || '';
-  const cmds = parseD(dVal);
-  const positions = computePositions(cmds);
+function makeCmdPropRow(node, cmds, cmd, key) {
+  const row = document.createElement('div');
+  row.className = 'attr-row';
 
-  cmds.forEach((cmd, i) => {
-    _pathCmdsList.appendChild(makeCmdRow(node, cmds, cmd, i, positions[i]));
+  const label = document.createElement('span');
+  label.className = 'attr-name';
+  label.textContent = key;
+  label.title = key;
+
+  const input = document.createElement('input');
+  input.className = 'attr-value';
+  input.type = 'number';
+  input.value = cmd[key];
+  input.step = 1;
+  input.spellcheck = false;
+
+  const commit = () => {
+    const v = parseFloat(input.value);
+    if (isNaN(v) || v === cmd[key]) return;
+    cmd[key] = v;
+    node.attrs.d = serializeD(cmds);
+    emitDoc();
+  };
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { input.blur(); }
+    if (e.key === 'Escape') { input.value = cmd[key]; input.blur(); }
   });
+
+  row.appendChild(label);
+  row.appendChild(input);
+  return row;
 }
 
-function makeCmdRow(node, cmds, cmd, index, pos) {
+function makeDeleteCmdRow(node, cmds) {
   const row = document.createElement('div');
-  row.className = 'cmd-row' + (state.selectedCmdIdx === index ? ' selected' : '');
-  row.dataset.cmd = index;
+  row.className = 'attr-row';
+  row.style.paddingTop = '6px';
 
-  // Index + letter
-  const idx = document.createElement('span');
-  idx.className = 'cmd-idx';
-  idx.textContent = index;
-
-  const letter = document.createElement('span');
-  letter.className = 'cmd-letter';
-  letter.textContent = cmd.letter;
-
-  // Args — one input per arg with label
-  const argsEl = document.createElement('span');
-  argsEl.className = 'cmd-args';
-  const labels = argLabels(cmd.letter);
-  cmd.args.forEach((arg, ai) => {
-    const wrap = document.createElement('span');
-    wrap.className = 'cmd-arg-wrap';
-    if (labels[ai]) {
-      const lbl = document.createElement('span');
-      lbl.className = 'cmd-arg-label';
-      lbl.textContent = labels[ai];
-      wrap.appendChild(lbl);
-    }
-    const inp = document.createElement('input');
-    inp.className = 'cmd-arg-input';
-    inp.type = 'number';
-    inp.value = arg;
-    inp.step = 1;
-
-    const commitArg = () => {
-      const v = parseFloat(inp.value);
-      if (isNaN(v) || v === cmd.args[ai]) return;
-      cmd.args[ai] = v;
-      node.attrs.d = serializeD(cmds);
-      emitDoc();
-    };
-    inp.addEventListener('blur', commitArg);
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
-    wrap.appendChild(inp);
-    argsEl.appendChild(wrap);
-  });
-
-  // Delete button
-  const del = document.createElement('button');
-  del.className = 'cmd-del';
-  del.textContent = '×';
-  del.addEventListener('click', e => {
-    e.stopPropagation();
-    cmds.splice(index, 1);
+  const btn = document.createElement('button');
+  btn.className = 'danger';
+  btn.style.width = '100%';
+  btn.textContent = 'Delete command';
+  btn.addEventListener('click', () => {
+    const idx = state.selectedCmdIdx;
+    cmds.splice(idx, 1);
     node.attrs.d = serializeD(cmds);
-    if (state.selectedCmdIdx >= cmds.length) state.selectedCmdIdx = cmds.length - 1;
+    state.selectedCmdIdx = cmds.length ? Math.min(idx, cmds.length - 1) : null;
     emitDoc();
-  });
-
-  // Click row to select command
-  row.addEventListener('pointerdown', e => {
-    state.selectedCmdIdx = index;
     emit('select');
   });
 
-  row.appendChild(idx);
-  row.appendChild(letter);
-  row.appendChild(argsEl);
-  row.appendChild(del);
+  row.appendChild(btn);
   return row;
 }
 
@@ -231,10 +217,8 @@ function onAddCmd() {
   if (!node || node.tag !== 'path') return;
 
   const letter = _newCmdType.value;
-  const dVal = node.attrs.d || '';
-  const cmds = parseD(dVal);
+  const cmds = parseD(node.attrs.d || '');
 
-  // Determine current pen position from last command
   let cx = 0, cy = 0;
   if (cmds.length > 0) {
     const positions = computePositions(cmds);
@@ -242,7 +226,7 @@ function onAddCmd() {
     cx = last.absX; cy = last.absY;
   }
 
-  cmds.push({ letter, args: defaultArgs(letter, cx, cy) });
+  cmds.push(defaultCmd(letter, cx, cy));
   node.attrs.d = serializeD(cmds);
   state.selectedCmdIdx = cmds.length - 1;
   emitDoc();
