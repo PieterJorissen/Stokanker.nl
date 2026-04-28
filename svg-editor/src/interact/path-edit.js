@@ -1,9 +1,9 @@
 // Path-edit mode — drag anchor points and control handles to edit path commands.
 // Operates entirely through named path command props; never stores extra geometry state.
 
-import { state, emit, emitDoc } from '../model/state.js';
+import { doc, editor, emit, emitDoc } from '../model/state.js';
 import { findById } from '../model/node.js';
-import { parseD, serializeD, computePositions } from '../model/path.js';
+import { parseD, serializeD } from '../model/path.js';
 
 let _dragging = null;
 // _dragging = {
@@ -26,7 +26,7 @@ export const handler = {
     const cpIdx  = target.dataset.cp  !== undefined ? parseInt(target.dataset.cp)  : null;
 
     if (cmdIdx === null) {
-      state.selectedCmdIdx = null;
+      editor.selectedCmdIdx = null;
       emit('select');
       return;
     }
@@ -42,7 +42,7 @@ export const handler = {
 
     if (!isHandle && !isAnchor) return;
 
-    state.selectedCmdIdx = cmdIdx;
+    editor.selectedCmdIdx = cmdIdx;
     emit('select');
 
     _dragging = {
@@ -75,16 +75,7 @@ export const handler = {
         cmd.x = orig.x + dx;
       } else if (L === 'V') {
         cmd.y = orig.y + dy;
-      } else if (L === 'C') {
-        cmd.x = orig.x + dx;
-        cmd.y = orig.y + dy;
-      } else if (L === 'S') {
-        cmd.x = orig.x + dx;
-        cmd.y = orig.y + dy;
-      } else if (L === 'Q') {
-        cmd.x = orig.x + dx;
-        cmd.y = orig.y + dy;
-      } else if (L === 'A') {
+      } else if (L === 'C' || L === 'S' || L === 'Q' || L === 'A') {
         cmd.x = orig.x + dx;
         cmd.y = orig.y + dy;
       }
@@ -120,13 +111,13 @@ export const handler = {
   },
 
   onContextMenu() {
-    state.mode = 'select';
+    editor.mode = 'select';
     emit('mode');
   },
 };
 
 function getSelectedPath() {
-  if (!state.selectedId) return null;
-  const node = findById(state.root, state.selectedId);
+  if (!editor.selectedId) return null;
+  const node = findById(doc.root, editor.selectedId);
   return node?.tag === 'path' ? node : null;
 }

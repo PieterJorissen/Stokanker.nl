@@ -1,6 +1,6 @@
 // Bootstrap — wires all modules together via the event bus.
 
-import { state, on, emitDoc, emitMode } from './model/state.js';
+import { doc, editor, on, emitDoc, emitMode } from './model/state.js';
 import { defaultDocument } from './model/node.js';
 
 import * as SvgRender from './render/svg.js';
@@ -18,12 +18,12 @@ import { handler as drawHandler, startDraw, cancelDraw } from './interact/draw.j
 // --- Init ---
 
 function init() {
-  const canvas     = document.getElementById('canvas');
-  const docGroup   = document.getElementById('doc');
-  const overlayGrp = document.getElementById('overlay');
-  const selBox     = document.getElementById('sel-box');
+  const canvas      = document.getElementById('canvas');
+  const docGroup    = document.getElementById('doc');
+  const overlayGrp  = document.getElementById('overlay');
+  const selBox      = document.getElementById('sel-box');
   const pathHandles = document.getElementById('path-handles');
-  const treeRoot   = document.getElementById('tree-root');
+  const treeRoot    = document.getElementById('tree-root');
   const underlayImg = document.getElementById('underlay-img');
 
   // Init render modules
@@ -45,19 +45,18 @@ function init() {
   Toolbar.init();
 
   // Init canvas interaction
-  const modeHandlers = {
+  initCanvas(canvas, {
     'select':    selectHandler,
     'path-edit': pathEditHandler,
     'draw':      drawHandler,
-  };
-  initCanvas(canvas, modeHandlers);
+  });
 
   // Underlay img rendering
   on('underlay', () => renderUnderlay(underlayImg));
 
   // Wire event bus → render pipeline
   on('doc', () => {
-    SvgRender.renderDocument(state.root);
+    SvgRender.renderDocument(doc.root);
     Overlay.renderOverlay();
     Tree.renderTree();
     Attrs.renderAttrs();
@@ -69,17 +68,15 @@ function init() {
     Tree.renderTree();
     Tree.scrollToSelected();
     Attrs.renderAttrs();
-    // Auto-enable path-edit mode when a path is selected and user switches
-    // (no auto-switch — user controls mode explicitly)
   });
 
   on('mode', () => {
     Toolbar.syncModeButtons();
     Overlay.renderOverlay();
     Attrs.renderAttrs();
-    document.body.dataset.mode = state.mode;
-    if (state.mode === 'draw') startDraw();
-    document.getElementById('draw-hint').hidden = state.mode !== 'draw';
+    document.body.dataset.mode = editor.mode;
+    if (editor.mode === 'draw') startDraw();
+    document.getElementById('draw-hint').hidden = editor.mode !== 'draw';
   });
 
   on('viewport', () => {
@@ -87,15 +84,12 @@ function init() {
     Overlay.renderOverlay();
   });
 
-  // Lightweight overlay-only redraw (e.g. draw mode preview line)
   on('overlay', () => Overlay.renderOverlay());
 
-  on('draw-cancel', () => {
-    cancelDraw();
-  });
+  on('draw-cancel', () => cancelDraw());
 
   // Initial render
-  state.root = defaultDocument();
+  doc.root = defaultDocument();
   emitDoc();
   emitMode();
 
@@ -108,16 +102,16 @@ function init() {
 }
 
 function renderUnderlay(img) {
-  if (!state.underlay?.dataUrl) {
+  if (!editor.underlay?.dataUrl) {
     img.removeAttribute('href');
     img.style.display = 'none';
     return;
   }
-  img.setAttribute('href', state.underlay.dataUrl);
-  img.setAttribute('opacity', state.underlay.opacity ?? 0.4);
+  img.setAttribute('href', editor.underlay.dataUrl);
+  img.setAttribute('opacity', editor.underlay.opacity ?? 0.4);
 
   // Size underlay to document viewBox
-  const vb = state.root?.attrs?.viewBox?.trim().split(/[\s,]+/).map(Number);
+  const vb = doc.root?.attrs?.viewBox?.trim().split(/[\s,]+/).map(Number);
   if (vb?.length === 4) {
     img.setAttribute('x', vb[0]);
     img.setAttribute('y', vb[1]);

@@ -2,12 +2,12 @@
 // In path-edit mode with a command selected, shows that command's named props
 // in the same panel — same UI, same mental model as element attributes.
 
-import { state, emit, emitDoc } from '../model/state.js';
+import { doc, editor, emit, emitDoc } from '../model/state.js';
 import { findById, setAttr, removeAttr } from '../model/node.js';
 import { parseD, serializeD, defaultCmd, computePositions, KEYS } from '../model/path.js';
 
-let _attrList   = null;
-let _tagLabel   = null;
+let _attrList     = null;
+let _tagLabel     = null;
 let _newNameInput = null;
 let _newValInput  = null;
 let _addAttrBtn   = null;
@@ -35,7 +35,7 @@ export function renderAttrs() {
 
   _attrList.innerHTML = '';
 
-  const node = state.selectedId ? findById(state.root, state.selectedId) : null;
+  const node = editor.selectedId ? findById(doc.root, editor.selectedId) : null;
 
   if (!node) {
     _tagLabel.textContent = '';
@@ -44,21 +44,20 @@ export function renderAttrs() {
   }
 
   // Path-edit mode with a command selected → show command props as attributes
-  const inPathEdit = state.mode === 'path-edit' && node.tag === 'path';
-  const cmdSelected = inPathEdit && state.selectedCmdIdx !== null;
+  const inPathEdit = editor.mode === 'path-edit' && node.tag === 'path';
+  const cmdSelected = inPathEdit && editor.selectedCmdIdx !== null;
 
   _cmdAddRow.hidden = !inPathEdit;
 
   if (cmdSelected) {
     const cmds = parseD(node.attrs.d || '');
-    const cmd = cmds[state.selectedCmdIdx];
+    const cmd = cmds[editor.selectedCmdIdx];
     if (cmd) {
       _tagLabel.textContent = cmd.letter;
       const keys = KEYS[cmd.letter] ?? [];
       for (const key of keys) {
         _attrList.appendChild(makeCmdPropRow(node, cmds, cmd, key));
       }
-      // Delete-command button at bottom
       _attrList.appendChild(makeDeleteCmdRow(node, cmds));
       return;
     }
@@ -144,7 +143,7 @@ function onAddAttr() {
   const value = _newValInput.value;
   if (!name) return;
 
-  const node = state.selectedId ? findById(state.root, state.selectedId) : null;
+  const node = editor.selectedId ? findById(doc.root, editor.selectedId) : null;
   if (!node || node.tag === '#text') return;
 
   setAttr(node, name, value);
@@ -200,10 +199,10 @@ function makeDeleteCmdRow(node, cmds) {
   btn.style.width = '100%';
   btn.textContent = 'Delete command';
   btn.addEventListener('click', () => {
-    const idx = state.selectedCmdIdx;
+    const idx = editor.selectedCmdIdx;
     cmds.splice(idx, 1);
     node.attrs.d = serializeD(cmds);
-    state.selectedCmdIdx = cmds.length ? Math.min(idx, cmds.length - 1) : null;
+    editor.selectedCmdIdx = cmds.length ? Math.min(idx, cmds.length - 1) : null;
     emitDoc();
     emit('select');
   });
@@ -213,7 +212,7 @@ function makeDeleteCmdRow(node, cmds) {
 }
 
 function onAddCmd() {
-  const node = state.selectedId ? findById(state.root, state.selectedId) : null;
+  const node = editor.selectedId ? findById(doc.root, editor.selectedId) : null;
   if (!node || node.tag !== 'path') return;
 
   const letter = _newCmdType.value;
@@ -228,6 +227,6 @@ function onAddCmd() {
 
   cmds.push(defaultCmd(letter, cx, cy));
   node.attrs.d = serializeD(cmds);
-  state.selectedCmdIdx = cmds.length - 1;
+  editor.selectedCmdIdx = cmds.length - 1;
   emitDoc();
 }

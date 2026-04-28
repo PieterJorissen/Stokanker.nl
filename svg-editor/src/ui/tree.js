@@ -2,7 +2,7 @@
 // Click to select a node. Reflects selected state via CSS class.
 // Re-renders fully on document or selection changes.
 
-import { state, emit } from '../model/state.js';
+import { doc, editor, emit } from '../model/state.js';
 
 let _container = null;
 
@@ -11,9 +11,9 @@ export function init(container) {
 }
 
 export function renderTree() {
-  if (!_container || !state.root) return;
+  if (!_container || !doc.root) return;
   _container.innerHTML = '';
-  _container.appendChild(buildNodeEl(state.root, 0, true));
+  _container.appendChild(buildNodeEl(doc.root, 0, true));
 }
 
 function buildNodeEl(node, depth, isRoot) {
@@ -24,11 +24,10 @@ function buildNodeEl(node, depth, isRoot) {
   wrapper.dataset.id = node._id;
 
   const row = document.createElement('div');
-  row.className = 'tree-row' + (node._id === state.selectedId ? ' selected' : '');
+  row.className = 'tree-row' + (node._id === editor.selectedId ? ' selected' : '');
   row.style.paddingLeft = (depth * 14 + 6) + 'px';
   row.dataset.id = node._id;
 
-  // Expand/collapse toggle for nodes with children
   const hasContent = node.children.length > 0;
   const toggle = document.createElement('span');
   toggle.className = 'tree-toggle';
@@ -38,7 +37,6 @@ function buildNodeEl(node, depth, isRoot) {
   tag.className = 'tree-tag';
   tag.textContent = node.tag;
 
-  // Show key identifying attributes as hints
   const hint = document.createElement('span');
   hint.className = 'tree-hint';
   hint.textContent = attrHint(node);
@@ -49,8 +47,8 @@ function buildNodeEl(node, depth, isRoot) {
 
   row.addEventListener('pointerdown', e => {
     e.stopPropagation();
-    state.selectedId = node._id;
-    state.selectedCmdIdx = null;
+    editor.selectedId = node._id;
+    editor.selectedCmdIdx = null;
     emit('select');
   });
 
@@ -77,15 +75,15 @@ function buildNodeEl(node, depth, isRoot) {
 
 function buildTextEl(node, depth) {
   const row = document.createElement('div');
-  row.className = 'tree-row text-node' + (node._id === state.selectedId ? ' selected' : '');
+  row.className = 'tree-row text-node' + (node._id === editor.selectedId ? ' selected' : '');
   row.style.paddingLeft = (depth * 14 + 6 + 12) + 'px';
   row.dataset.id = node._id;
   row.textContent = '"' + node.content.trim().slice(0, 30) + (node.content.length > 30 ? '…' : '') + '"';
 
   row.addEventListener('pointerdown', e => {
     e.stopPropagation();
-    state.selectedId = node._id;
-    state.selectedCmdIdx = null;
+    editor.selectedId = node._id;
+    editor.selectedCmdIdx = null;
     emit('select');
   });
 
@@ -103,7 +101,7 @@ function attrHint(node) {
 
 /** Scroll the selected node into view in the tree panel. */
 export function scrollToSelected() {
-  if (!_container || !state.selectedId) return;
-  const row = _container.querySelector(`.tree-row[data-id="${state.selectedId}"]`);
+  if (!_container || !editor.selectedId) return;
+  const row = _container.querySelector(`.tree-row[data-id="${editor.selectedId}"]`);
   if (row) row.scrollIntoView({ block: 'nearest' });
 }

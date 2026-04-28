@@ -2,7 +2,7 @@
 // Dispatches to the active mode handler.
 // Handles pan/zoom viewport navigation (always available).
 
-import { state, emitViewport } from '../model/state.js';
+import { editor, emitViewport } from '../model/state.js';
 
 const MIN_ZOOM = 0.01;
 const MAX_ZOOM = 100;
@@ -43,15 +43,15 @@ export function screenToDoc(screenX, screenY) {
   const relX = screenX - rect.left;
   const relY = screenY - rect.top;
   return {
-    x: state.viewport.x + relX / state.viewport.zoom,
-    y: state.viewport.y + relY / state.viewport.zoom,
+    x: editor.viewport.x + relX / editor.viewport.zoom,
+    y: editor.viewport.y + relY / editor.viewport.zoom,
   };
 }
 
 /** Apply the current viewport transform to the canvas SVG's viewBox. */
 export function applyViewport() {
   if (!_canvas) return;
-  const { x, y, zoom } = state.viewport;
+  const { x, y, zoom } = editor.viewport;
   const cw = _canvas.clientWidth;
   const ch = _canvas.clientHeight;
   if (!cw || !ch) return;
@@ -88,7 +88,7 @@ function onPointerDown(e) {
 
   startLongPress(e);
 
-  const handler = _handlers[state.mode];
+  const handler = _handlers[editor.mode];
   handler?.onDown?.(e, screenToDoc(e.clientX, e.clientY));
 }
 
@@ -125,9 +125,8 @@ function onPointerMove(e) {
   }
 
   if (!_activePtr || e.pointerId !== _activePtr.pointerId) {
-    // Update coords display
-    const doc = screenToDoc(e.clientX, e.clientY);
-    updateCoordsDisplay(doc.x, doc.y);
+    const docPos = screenToDoc(e.clientX, e.clientY);
+    updateCoordsDisplay(docPos.x, docPos.y);
     return;
   }
 
@@ -144,9 +143,9 @@ function onPointerMove(e) {
   }
 
   if (_panning) {
-    const zoom = state.viewport.zoom;
-    state.viewport.x = _panStart.vpX - totalDX / zoom;
-    state.viewport.y = _panStart.vpY - totalDY / zoom;
+    const zoom = editor.viewport.zoom;
+    editor.viewport.x = _panStart.vpX - totalDX / zoom;
+    editor.viewport.y = _panStart.vpY - totalDY / zoom;
     emitViewport();
     return;
   }
@@ -154,8 +153,8 @@ function onPointerMove(e) {
   const docPos = screenToDoc(e.clientX, e.clientY);
   updateCoordsDisplay(docPos.x, docPos.y);
 
-  const handler = _handlers[state.mode];
-  handler?.onMove?.(e, docPos, { dx: dx / state.viewport.zoom, dy: dy / state.viewport.zoom });
+  const handler = _handlers[editor.mode];
+  handler?.onMove?.(e, docPos, { dx: dx / editor.viewport.zoom, dy: dy / editor.viewport.zoom });
 }
 
 function onPointerUp(e) {
@@ -169,22 +168,21 @@ function onPointerUp(e) {
   if (!_activePtr || e.pointerId !== _activePtr.pointerId) return;
 
   const wasDragging = _activePtr.dragging;
-  const ptr = _activePtr;
   _activePtr = null;
   _panning = false;
 
   if (wasDragging) {
-    const handler = _handlers[state.mode];
+    const handler = _handlers[editor.mode];
     handler?.onDragEnd?.(e, screenToDoc(e.clientX, e.clientY));
   } else {
-    const handler = _handlers[state.mode];
+    const handler = _handlers[editor.mode];
     handler?.onUp?.(e, screenToDoc(e.clientX, e.clientY));
   }
 }
 
 function onContextMenu(e) {
   e.preventDefault();
-  const handler = _handlers[state.mode];
+  const handler = _handlers[editor.mode];
   handler?.onContextMenu?.(e, screenToDoc(e.clientX, e.clientY));
 }
 
@@ -200,7 +198,7 @@ function startPan(e) {
   _panning = true;
   _panStart = {
     x: e.clientX, y: e.clientY,
-    vpX: state.viewport.x, vpY: state.viewport.y,
+    vpX: editor.viewport.x, vpY: editor.viewport.y,
   };
   _activePtr = {
     pointerId: e.pointerId,
@@ -212,20 +210,20 @@ function startPan(e) {
 }
 
 function zoomAt(screenX, screenY, factor) {
-  const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, state.viewport.zoom * factor));
-  if (newZoom === state.viewport.zoom) return;
+  const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, editor.viewport.zoom * factor));
+  if (newZoom === editor.viewport.zoom) return;
 
   const rect = _canvas.getBoundingClientRect();
   const relX = screenX - rect.left;
   const relY = screenY - rect.top;
 
   // Keep the doc point under the cursor fixed
-  const docX = state.viewport.x + relX / state.viewport.zoom;
-  const docY = state.viewport.y + relY / state.viewport.zoom;
+  const docX = editor.viewport.x + relX / editor.viewport.zoom;
+  const docY = editor.viewport.y + relY / editor.viewport.zoom;
 
-  state.viewport.zoom = newZoom;
-  state.viewport.x = docX - relX / newZoom;
-  state.viewport.y = docY - relY / newZoom;
+  editor.viewport.zoom = newZoom;
+  editor.viewport.x = docX - relX / newZoom;
+  editor.viewport.y = docY - relY / newZoom;
   emitViewport();
 }
 
@@ -235,7 +233,7 @@ function startLongPress(e) {
   clearLongPress();
   _longPressTimer = setTimeout(() => {
     _longPressTimer = null;
-    const handler = _handlers[state.mode];
+    const handler = _handlers[editor.mode];
     handler?.onLongPress?.(e, screenToDoc(e.clientX, e.clientY));
   }, LONG_PRESS_MS);
 }
@@ -247,6 +245,6 @@ function clearLongPress() {
 // --- Coords display ---
 
 function updateCoordsDisplay(x, y) {
-  const el = document.getElementById('coords');
-  if (el) el.textContent = `${x.toFixed(1)}, ${y.toFixed(1)}`;
+  const coordsEl = document.getElementById('coords');
+  if (coordsEl) coordsEl.textContent = `${x.toFixed(1)}, ${y.toFixed(1)}`;
 }

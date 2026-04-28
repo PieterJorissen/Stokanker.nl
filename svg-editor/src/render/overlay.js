@@ -2,7 +2,7 @@
 // Drawn in the #overlay SVG group (same coordinate space as #doc).
 // Never writes to the document. Redrawn on any state change.
 
-import { state } from '../model/state.js';
+import { doc, editor } from '../model/state.js';
 import { findById } from '../model/node.js';
 import { parseD, computePositions } from '../model/path.js';
 import { elForId } from './svg.js';
@@ -44,12 +44,12 @@ function renderDocBorder() {
     _docBorder = el('rect', { class: 'doc-border', fill: 'none' });
     _overlay.insertBefore(_docBorder, _overlay.firstChild);
   }
-  const vbStr = state.root?.attrs?.viewBox;
+  const vbStr = doc.root?.attrs?.viewBox;
   if (!vbStr) { _docBorder.style.display = 'none'; return; }
   const parts = vbStr.trim().split(/[\s,]+/).map(Number);
   if (parts.length !== 4) { _docBorder.style.display = 'none'; return; }
   const [x, y, w, h] = parts;
-  const sw = 1 / (state.viewport.zoom || 1);
+  const sw = 1 / (editor.viewport.zoom || 1);
   _docBorder.setAttribute('x', x);
   _docBorder.setAttribute('y', y);
   _docBorder.setAttribute('width', w);
@@ -63,27 +63,27 @@ function renderDocBorder() {
 function renderSelectionBox() {
   if (!_selBox) return;
 
-  const id = state.selectedId;
-  if (!id || state.mode === 'path-edit') {
+  const id = editor.selectedId;
+  if (!id || editor.mode === 'path-edit') {
     _selBox.style.display = 'none';
     return;
   }
 
-  const el = elForId(id);
-  if (!el || typeof el.getBBox !== 'function') {
+  const domEl = elForId(id);
+  if (!domEl || typeof domEl.getBBox !== 'function') {
     _selBox.style.display = 'none';
     return;
   }
 
   try {
-    const bbox = el.getBBox();
+    const bbox = domEl.getBBox();
     if (bbox.width === 0 && bbox.height === 0) { _selBox.style.display = 'none'; return; }
-    const pad = SEL_BOX_PAD / state.viewport.zoom;
+    const pad = SEL_BOX_PAD / editor.viewport.zoom;
     _selBox.setAttribute('x', bbox.x - pad);
     _selBox.setAttribute('y', bbox.y - pad);
     _selBox.setAttribute('width', bbox.width + pad * 2);
     _selBox.setAttribute('height', bbox.height + pad * 2);
-    _selBox.setAttribute('stroke-width', 1.5 / state.viewport.zoom);
+    _selBox.setAttribute('stroke-width', 1.5 / editor.viewport.zoom);
     _selBox.style.display = '';
   } catch {
     _selBox.style.display = 'none';
@@ -96,12 +96,12 @@ function renderPathHandles() {
   while (_pathHandles.firstChild) _pathHandles.removeChild(_pathHandles.firstChild);
   if (!_pathHandles) return;
 
-  if (state.mode !== 'path-edit' && state.mode !== 'draw') return;
+  if (editor.mode !== 'path-edit' && editor.mode !== 'draw') return;
 
-  const id = state.selectedId;
+  const id = editor.selectedId;
   if (!id) return;
 
-  const node = findById(state.root, id);
+  const node = findById(doc.root, id);
   if (!node || node.tag !== 'path') return;
 
   const dAttr = node.attrs.d || '';
@@ -109,13 +109,13 @@ function renderPathHandles() {
   if (!cmds.length) return;
 
   const positions = computePositions(cmds);
-  const z = state.viewport.zoom;
+  const z = editor.viewport.zoom;
   const anchorR = ANCHOR_R / z;
   const handleR = HANDLE_R / z;
   const strokeW = 1 / z;
 
   // Draw handle lines first (behind anchors)
-  positions.forEach(({ absX, absY, controls }, i) => {
+  positions.forEach(({ absX, absY, controls }) => {
     controls.forEach(cp => {
       const line = el('line', {
         x1: absX, y1: absY, x2: cp.x, y2: cp.y,
@@ -128,7 +128,7 @@ function renderPathHandles() {
   });
 
   // Draw control point handles
-  positions.forEach(({ absX, absY, controls }, i) => {
+  positions.forEach(({ controls }, i) => {
     controls.forEach((cp, ci) => {
       const circle = el('circle', {
         cx: cp.x, cy: cp.y, r: handleR,
@@ -145,9 +145,9 @@ function renderPathHandles() {
 
   // Draw endpoint anchors
   positions.forEach(({ absX, absY }, i) => {
-    const isSelected = state.selectedCmdIdx === i;
+    const isSelected = editor.selectedCmdIdx === i;
     const cmd = cmds[i];
-    if (cmd.letter.toUpperCase() === 'Z') return; // Z has no visual anchor
+    if (cmd.letter.toUpperCase() === 'Z') return;
 
     const circle = el('circle', {
       cx: absX, cy: absY, r: anchorR,
@@ -164,16 +164,15 @@ function renderPathHandles() {
 // --- Draw preview line ---
 
 function renderDrawPreview() {
-  // Remove any existing preview
   const existing = _overlay.querySelector('.draw-preview');
   if (existing) existing.remove();
 
-  if (state.mode !== 'draw') return;
+  if (editor.mode !== 'draw') return;
   const preview = getPreviewPos();
   const drawId = getDrawNodeId();
   if (!preview || drawId === null) return;
 
-  const node = findById(state.root, drawId);
+  const node = findById(doc.root, drawId);
   if (!node || node.tag !== 'path') return;
 
   const cmds = parseD(node.attrs.d || '');
@@ -181,7 +180,7 @@ function renderDrawPreview() {
 
   const positions = computePositions(cmds);
   const last = positions[positions.length - 1];
-  const z = state.viewport.zoom;
+  const z = editor.viewport.zoom;
 
   const line = el('line', {
     x1: last.absX, y1: last.absY,
@@ -197,7 +196,7 @@ function renderDrawPreview() {
 // Allow pointer events on anchors/handles only in path-edit mode
 function applyModePointerEvents() {
   if (!_overlay) return;
-  if (state.mode === 'path-edit') {
+  if (editor.mode === 'path-edit') {
     _overlay.style.pointerEvents = 'none';
     _pathHandles.style.pointerEvents = 'all';
   } else {
