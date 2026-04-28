@@ -74,33 +74,27 @@
       <div class="panel-header">
         <span>Attributes</span>
         <span id="attr-node-tag" class="tag-label"></span>
+        <div class="tree-actions" id="cmd-add-row" hidden>
+          <select id="new-cmd-type">
+            <option>M</option><option>m</option>
+            <option>L</option><option>l</option>
+            <option>H</option><option>h</option>
+            <option>V</option><option>v</option>
+            <option>C</option><option>c</option>
+            <option>Q</option><option>q</option>
+            <option>S</option><option>s</option>
+            <option>T</option><option>t</option>
+            <option>A</option><option>a</option>
+            <option>Z</option><option>z</option>
+          </select>
+          <button id="btn-add-cmd" title="Append command">+</button>
+        </div>
       </div>
       <div id="attr-list"></div>
       <div id="attr-add-row">
         <input id="attr-new-name" placeholder="name" spellcheck="false">
         <input id="attr-new-val" placeholder="value" spellcheck="false">
         <button id="btn-add-attr" title="Add attribute">+</button>
-      </div>
-      <div id="path-cmds-section" hidden>
-        <div class="panel-header">
-          <span>Path Commands</span>
-          <div class="tree-actions">
-            <select id="new-cmd-type">
-              <option>M</option><option>m</option>
-              <option>L</option><option>l</option>
-              <option>H</option><option>h</option>
-              <option>V</option><option>v</option>
-              <option>C</option><option>c</option>
-              <option>Q</option><option>q</option>
-              <option>S</option><option>s</option>
-              <option>T</option><option>t</option>
-              <option>A</option><option>a</option>
-              <option>Z</option><option>z</option>
-            </select>
-            <button id="btn-add-cmd" title="Append command">+</button>
-          </div>
-        </div>
-        <div id="path-cmds-list"></div>
       </div>
     </aside>
   </main>

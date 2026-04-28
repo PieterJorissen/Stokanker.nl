@@ -110,18 +110,17 @@ function appendPoint(docPos) {
   if (!node) { _drawNodeId = null; return; }
 
   const cmds = parseD(node.attrs.d || '');
-  const cmdType = state.drawCmdType || 'L';
-  cmds.push({ letter: cmdType, args: buildArgs(cmdType, docPos, cmds) });
+  const letter = 'L';
+  cmds.push(buildCmd(letter, docPos, cmds));
   node.attrs.d = serializeD(cmds);
   state.selectedCmdIdx = cmds.length - 1;
   emitDoc();
 }
 
-function buildArgs(letter, docPos, cmds) {
+function buildCmd(letter, docPos, cmds) {
   const L = letter.toUpperCase();
   const rel = letter !== L;
 
-  // Get current pen position for relative commands
   let cx = 0, cy = 0;
   if (cmds.length > 0) {
     const positions = computePositions(cmds);
@@ -129,26 +128,26 @@ function buildArgs(letter, docPos, cmds) {
     cx = last.absX; cy = last.absY;
   }
 
-  const x = rel ? docPos.x - cx : docPos.x;
-  const y = rel ? docPos.y - cy : docPos.y;
+  const x = fmt(rel ? docPos.x - cx : docPos.x);
+  const y = fmt(rel ? docPos.y - cy : docPos.y);
 
   switch (L) {
-    case 'L': case 'M': case 'T': return [fmt(x), fmt(y)];
-    case 'H': return [fmt(rel ? x : docPos.x)];
-    case 'V': return [fmt(rel ? y : docPos.y)];
+    case 'L': case 'M': case 'T': return { letter, x, y };
+    case 'H': return { letter, x: fmt(rel ? docPos.x - cx : docPos.x) };
+    case 'V': return { letter, y: fmt(rel ? docPos.y - cy : docPos.y) };
     case 'C': {
-      const mx = (cx + docPos.x) / 2;
-      const my = (cy + docPos.y) / 2;
-      return rel
-        ? [fmt(mx - cx), fmt(my - cy - 30), fmt(docPos.x - cx - 10), fmt(y - 30), fmt(x), fmt(y)]
-        : [fmt(mx), fmt(my - 30), fmt(docPos.x - 10), fmt(docPos.y - 30), fmt(docPos.x), fmt(docPos.y)];
+      const mx = rel ? fmt((docPos.x - cx) / 2) : fmt((cx + docPos.x) / 2);
+      const my = rel ? fmt((docPos.y - cy) / 2 - 30) : fmt((cy + docPos.y) / 2 - 30);
+      const ex = rel ? fmt(docPos.x - cx - 10) : fmt(docPos.x - 10);
+      const ey = rel ? fmt(y - 30) : fmt(docPos.y - 30);
+      return { letter, x1: mx, y1: my, x2: ex, y2: ey, x, y };
     }
     case 'Q': {
-      const mx = rel ? (docPos.x - cx) / 2 : (cx + docPos.x) / 2;
-      const my = rel ? (docPos.y - cy) / 2 - 20 : (cy + docPos.y) / 2 - 20;
-      return [fmt(mx), fmt(my), fmt(x), fmt(y)];
+      const qx = rel ? fmt((docPos.x - cx) / 2) : fmt((cx + docPos.x) / 2);
+      const qy = rel ? fmt((docPos.y - cy) / 2 - 20) : fmt((cy + docPos.y) / 2 - 20);
+      return { letter, x1: qx, y1: qy, x, y };
     }
-    default: return [fmt(x), fmt(y)];
+    default: return { letter, x, y };
   }
 }
 

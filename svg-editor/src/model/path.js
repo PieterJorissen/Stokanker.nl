@@ -1,26 +1,27 @@
 // PathCommands — lossless parse/serialize of SVG path `d` attribute.
-// Each command is { letter, args[] } where letter is exact (case preserved).
+// Each command is a named-prop object: { letter, x, y } / { letter, x1, y1, x2, y2, x, y } / etc.
+// Property names match SVG 1.1 spec (SVGPathSeg interface names).
 // Implicit command repetition is expanded into explicit commands for editability.
-// Serializes back to a compact, valid d string.
 
-// Number of coordinate arguments per single command instance
-const ARITY = {
-  M: 2, m: 2,
-  Z: 0, z: 0,
-  L: 2, l: 2,
-  H: 1, h: 1,
-  V: 1, v: 1,
-  C: 6, c: 6,
-  S: 4, s: 4,
-  Q: 4, q: 4,
-  T: 2, t: 2,
-  A: 7, a: 7,
+// Named keys per command letter — single source of truth for arity and labels
+export const KEYS = {
+  M: ['x','y'],   m: ['x','y'],
+  L: ['x','y'],   l: ['x','y'],
+  T: ['x','y'],   t: ['x','y'],
+  H: ['x'],       h: ['x'],
+  V: ['y'],       v: ['y'],
+  C: ['x1','y1','x2','y2','x','y'],   c: ['x1','y1','x2','y2','x','y'],
+  S: ['x2','y2','x','y'],             s: ['x2','y2','x','y'],
+  Q: ['x1','y1','x','y'],             q: ['x1','y1','x','y'],
+  A: ['rx','ry','x-axis-rotation','large-arc-flag','sweep-flag','x','y'],
+  a: ['rx','ry','x-axis-rotation','large-arc-flag','sweep-flag','x','y'],
+  Z: [],          z: [],
 };
 
 // What letter implicit repetitions become after the first command
 const IMPLICIT_REPEAT = { M: 'L', m: 'l' };
 
-/** Parse an SVG `d` string into PathCommand[]. */
+/** Parse an SVG `d` string into PathCommand[]. Each command is { letter, ...namedProps }. */
 export function parseD(d) {
   if (!d || !d.trim()) return [];
 
@@ -30,33 +31,36 @@ export function parseD(d) {
 
   while (i < tokens.length) {
     const tok = tokens[i];
-    if (!isLetter(tok)) { i++; continue; } // skip stray numbers
+    if (!isLetter(tok)) { i++; continue; }
     const letter = tok;
     i++;
-    const arity = ARITY[letter];
+    const keys = KEYS[letter];
 
-    if (arity === 0) {
-      commands.push({ letter, args: [] });
+    if (keys === undefined) { continue; }
+
+    if (keys.length === 0) {
+      commands.push({ letter });
       continue;
     }
 
-    // First instance of this command
-    const firstArgs = readArgs(tokens, i, arity);
-    if (firstArgs.length === arity) {
-      i += arity;
-      commands.push({ letter, args: firstArgs });
+    // First instance
+    const firstVals = readVals(tokens, i, keys.length);
+    if (firstVals.length === keys.length) {
+      i += keys.length;
+      commands.push(makeCmd(letter, keys, firstVals));
     } else {
-      i += firstArgs.length;
+      i += firstVals.length;
       continue;
     }
 
-    // Implicit repetitions: subsequent numeric groups with same arity
+    // Implicit repetitions
     const repeatLetter = IMPLICIT_REPEAT[letter] ?? letter;
+    const repeatKeys = KEYS[repeatLetter];
     while (i < tokens.length && isNumber(tokens[i])) {
-      const repArgs = readArgs(tokens, i, arity);
-      if (repArgs.length !== arity) break;
-      i += arity;
-      commands.push({ letter: repeatLetter, args: repArgs });
+      const repVals = readVals(tokens, i, repeatKeys.length);
+      if (repVals.length !== repeatKeys.length) break;
+      i += repeatKeys.length;
+      commands.push(makeCmd(repeatLetter, repeatKeys, repVals));
     }
   }
 
@@ -66,9 +70,10 @@ export function parseD(d) {
 /** Serialize PathCommand[] back to a `d` string. */
 export function serializeD(commands) {
   if (!commands || commands.length === 0) return '';
-  return commands.map(({ letter, args }) => {
-    if (args.length === 0) return letter;
-    return letter + args.map(formatNum).join(' ');
+  return commands.map(cmd => {
+    const keys = KEYS[cmd.letter];
+    if (!keys || keys.length === 0) return cmd.letter;
+    return cmd.letter + keys.map(k => formatNum(cmd[k])).join(' ');
   }).join(' ');
 }
 
@@ -76,14 +81,14 @@ export function serializeD(commands) {
  * Compute absolute anchor positions for every command.
  * Returns an array parallel to `commands`, each entry:
  *   { absX, absY, controls: [{ x, y }] }
- * controls are control points (cp1, cp2) in absolute document coords.
  */
 export function computePositions(commands) {
   let cx = 0, cy = 0;
-  let initX = 0, initY = 0; // position of last M (for Z)
-  let prevCpX = null, prevCpY = null; // for S/s and T/t reflection
+  let initX = 0, initY = 0;
+  let prevCpX = null, prevCpY = null;
 
-  return commands.map(({ letter, args }) => {
+  return commands.map(cmd => {
+    const { letter } = cmd;
     const L = letter.toUpperCase();
     const rel = letter !== L;
     let absX = cx, absY = cy, controls = [];
@@ -91,43 +96,42 @@ export function computePositions(commands) {
     const r = (base, delta) => rel ? base + delta : delta;
 
     if (L === 'M') {
-      absX = r(cx, args[0]);
-      absY = r(cy, args[1]);
+      absX = r(cx, cmd.x);
+      absY = r(cy, cmd.y);
       initX = absX; initY = absY;
       prevCpX = null; prevCpY = null;
     } else if (L === 'L' || L === 'T') {
-      absX = r(cx, args[0]);
-      absY = r(cy, args[1]);
+      absX = r(cx, cmd.x);
+      absY = r(cy, cmd.y);
       prevCpX = null; prevCpY = null;
     } else if (L === 'H') {
-      absX = r(cx, args[0]);
+      absX = r(cx, cmd.x);
       absY = cy;
       prevCpX = null; prevCpY = null;
     } else if (L === 'V') {
       absX = cx;
-      absY = r(cy, args[0]);
+      absY = r(cy, cmd.y);
       prevCpX = null; prevCpY = null;
     } else if (L === 'C') {
-      const cp1x = r(cx, args[0]), cp1y = r(cy, args[1]);
-      const cp2x = r(cx, args[2]), cp2y = r(cy, args[3]);
-      absX = r(cx, args[4]); absY = r(cy, args[5]);
+      const cp1x = r(cx, cmd.x1), cp1y = r(cy, cmd.y1);
+      const cp2x = r(cx, cmd.x2), cp2y = r(cy, cmd.y2);
+      absX = r(cx, cmd.x); absY = r(cy, cmd.y);
       controls = [{ x: cp1x, y: cp1y }, { x: cp2x, y: cp2y }];
       prevCpX = cp2x; prevCpY = cp2y;
     } else if (L === 'S') {
-      // cp1 is reflection of previous cp2
       const cp1x = prevCpX !== null ? 2 * cx - prevCpX : cx;
       const cp1y = prevCpY !== null ? 2 * cy - prevCpY : cy;
-      const cp2x = r(cx, args[0]), cp2y = r(cy, args[1]);
-      absX = r(cx, args[2]); absY = r(cy, args[3]);
+      const cp2x = r(cx, cmd.x2), cp2y = r(cy, cmd.y2);
+      absX = r(cx, cmd.x); absY = r(cy, cmd.y);
       controls = [{ x: cp1x, y: cp1y }, { x: cp2x, y: cp2y }];
       prevCpX = cp2x; prevCpY = cp2y;
     } else if (L === 'Q') {
-      const cpx = r(cx, args[0]), cpy = r(cy, args[1]);
-      absX = r(cx, args[2]); absY = r(cy, args[3]);
+      const cpx = r(cx, cmd.x1), cpy = r(cy, cmd.y1);
+      absX = r(cx, cmd.x); absY = r(cy, cmd.y);
       controls = [{ x: cpx, y: cpy }];
       prevCpX = cpx; prevCpY = cpy;
     } else if (L === 'A') {
-      absX = r(cx, args[5]); absY = r(cy, args[6]);
+      absX = r(cx, cmd.x); absY = r(cy, cmd.y);
       prevCpX = null; prevCpY = null;
     } else if (L === 'Z') {
       absX = initX; absY = initY;
@@ -139,42 +143,40 @@ export function computePositions(commands) {
   });
 }
 
-/** Default args for a newly appended command, relative to current pen position. */
-export function defaultArgs(letter, cx, cy) {
+/** Default named-prop command object for a newly appended command. */
+export function defaultCmd(letter, cx, cy) {
   const L = letter.toUpperCase();
   const rel = letter !== L;
   switch (L) {
-    case 'M': return rel ? [0, 0] : [cx, cy];
-    case 'L': return rel ? [20, 0] : [cx + 20, cy];
-    case 'H': return rel ? [20] : [cx + 20];
-    case 'V': return rel ? [20] : [cy + 20];
-    case 'C': return rel ? [10, -20, 30, -20, 40, 0] : [cx + 10, cy - 20, cx + 30, cy - 20, cx + 40, cy];
-    case 'S': return rel ? [20, -20, 40, 0] : [cx + 20, cy - 20, cx + 40, cy];
-    case 'Q': return rel ? [20, -20, 40, 0] : [cx + 20, cy - 20, cx + 40, cy];
-    case 'T': return rel ? [40, 0] : [cx + 40, cy];
-    case 'A': return rel ? [20, 20, 0, 0, 1, 40, 0] : [20, 20, 0, 0, 1, cx + 40, cy];
-    case 'Z': return [];
-    default: return [];
-  }
-}
-
-/** Labels for each arg of a command letter. Used in the UI. */
-export function argLabels(letter) {
-  const L = letter.toUpperCase();
-  switch (L) {
-    case 'M': case 'L': case 'T': return ['x', 'y'];
-    case 'H': return ['x'];
-    case 'V': return ['y'];
-    case 'C': return ['x1', 'y1', 'x2', 'y2', 'x', 'y'];
-    case 'S': return ['x2', 'y2', 'x', 'y'];
-    case 'Q': return ['x1', 'y1', 'x', 'y'];
-    case 'A': return ['rx', 'ry', 'rot', 'large', 'sweep', 'x', 'y'];
-    case 'Z': return [];
-    default: return [];
+    case 'M': return rel ? { letter, x: 0, y: 0 } : { letter, x: cx, y: cy };
+    case 'L': return rel ? { letter, x: 20, y: 0 } : { letter, x: cx + 20, y: cy };
+    case 'H': return rel ? { letter, x: 20 } : { letter, x: cx + 20 };
+    case 'V': return rel ? { letter, y: 20 } : { letter, y: cy + 20 };
+    case 'C': return rel
+      ? { letter, x1: 10, y1: -20, x2: 30, y2: -20, x: 40, y: 0 }
+      : { letter, x1: cx + 10, y1: cy - 20, x2: cx + 30, y2: cy - 20, x: cx + 40, y: cy };
+    case 'S': return rel
+      ? { letter, x2: 20, y2: -20, x: 40, y: 0 }
+      : { letter, x2: cx + 20, y2: cy - 20, x: cx + 40, y: cy };
+    case 'Q': return rel
+      ? { letter, x1: 20, y1: -20, x: 40, y: 0 }
+      : { letter, x1: cx + 20, y1: cy - 20, x: cx + 40, y: cy };
+    case 'T': return rel ? { letter, x: 40, y: 0 } : { letter, x: cx + 40, y: cy };
+    case 'A': return rel
+      ? { letter, rx: 20, ry: 20, 'x-axis-rotation': 0, 'large-arc-flag': 0, 'sweep-flag': 1, x: 40, y: 0 }
+      : { letter, rx: 20, ry: 20, 'x-axis-rotation': 0, 'large-arc-flag': 0, 'sweep-flag': 1, x: cx + 40, y: cy };
+    case 'Z': return { letter };
+    default:  return { letter };
   }
 }
 
 // --- Internal helpers ---
+
+function makeCmd(letter, keys, vals) {
+  const cmd = { letter };
+  keys.forEach((k, i) => { cmd[k] = vals[i]; });
+  return cmd;
+}
 
 function tokenizeD(d) {
   const re = /([MmZzLlHhVvCcSsQqTtAa])|(-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/g;
@@ -192,18 +194,17 @@ function isNumber(s) {
   return /^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(s);
 }
 
-function readArgs(tokens, start, count) {
-  const args = [];
+function readVals(tokens, start, count) {
+  const vals = [];
   let i = start;
-  while (args.length < count && i < tokens.length && isNumber(tokens[i])) {
-    args.push(parseFloat(tokens[i++]));
+  while (vals.length < count && i < tokens.length && isNumber(tokens[i])) {
+    vals.push(parseFloat(tokens[i++]));
   }
-  return args;
+  return vals;
 }
 
 function formatNum(n) {
   if (!isFinite(n)) return '0';
-  // Strip unnecessary trailing zeros from decimals
   const s = n.toFixed(4);
   return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
 }

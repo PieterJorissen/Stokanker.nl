@@ -11,7 +11,6 @@ export const state = {
   mode: 'select',                // 'select' | 'path-edit' | 'draw'
   viewport: { x: 0, y: 0, zoom: 1 },  // document-space origin + zoom
   underlay: null,                // { dataUrl, opacity, includeInExport } | null
-  drawCmdType: 'L',              // command type used when drawing
 };
 
 // Simple event bus
