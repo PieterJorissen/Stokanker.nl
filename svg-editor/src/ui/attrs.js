@@ -1,6 +1,6 @@
 // Attribute editor panel — reflects the selected node's attributes.
-// In path-edit mode with a command selected, shows that command's named props
-// in the same panel — same UI, same mental model as element attributes.
+// When a path command is selected, shows that command's named props in the same
+// panel — same UI, same mental model as element attributes.
 
 import { doc, editor, emit, emitDoc } from '../model/state.js';
 import { findById, setAttr, removeAttr } from '../model/node.js';
@@ -43,19 +43,19 @@ export function renderAttrs() {
     return;
   }
 
-  // Path-edit mode with a command selected → show command props as attributes
-  const inPathEdit = editor.mode === 'path-edit' && node.tag === 'path';
-  const cmdSelected = inPathEdit && editor.selectedCmdIdx !== null;
+  const isPath      = node.tag === 'path';
+  const cmdSelected = isPath && editor.selectedCmdIdx !== null;
 
-  _cmdAddRow.hidden = !inPathEdit;
+  // Show cmd-add controls whenever a path is selected (no mode check needed)
+  _cmdAddRow.hidden = !isPath;
 
+  // Path command selected → show command's named props as attr rows
   if (cmdSelected) {
     const cmds = parseD(node.attrs.d || '');
-    const cmd = cmds[editor.selectedCmdIdx];
+    const cmd  = cmds[editor.selectedCmdIdx];
     if (cmd) {
       _tagLabel.textContent = cmd.letter;
-      const keys = KEYS[cmd.letter] ?? [];
-      for (const key of keys) {
+      for (const key of (KEYS[cmd.letter] ?? [])) {
         _attrList.appendChild(makeCmdPropRow(node, cmds, cmd, key));
       }
       _attrList.appendChild(makeDeleteCmdRow(node, cmds));
@@ -63,7 +63,7 @@ export function renderAttrs() {
     }
   }
 
-  // Default: show node tag + its attributes
+  // Default: node tag + its attributes
   if (node.tag === '#text') {
     _tagLabel.textContent = '#text';
     renderTextContent(node);
@@ -100,7 +100,7 @@ function makeAttrRow(node, name, value) {
   };
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { input.blur(); }
+    if (e.key === 'Enter')  { input.blur(); }
     if (e.key === 'Escape') { input.value = node.attrs[name]; input.blur(); }
   });
 
@@ -108,10 +108,7 @@ function makeAttrRow(node, name, value) {
   del.className = 'attr-del';
   del.textContent = '×';
   del.title = `Remove ${name}`;
-  del.addEventListener('click', () => {
-    removeAttr(node, name);
-    emitDoc();
-  });
+  del.addEventListener('click', () => { removeAttr(node, name); emitDoc(); });
 
   row.appendChild(label);
   row.appendChild(input);
@@ -120,26 +117,23 @@ function makeAttrRow(node, name, value) {
 }
 
 function renderTextContent(node) {
-  const row = document.createElement('div');
+  const row   = document.createElement('div');
   row.className = 'attr-row';
   const label = document.createElement('span');
   label.className = 'attr-name';
   label.textContent = 'content';
   const ta = document.createElement('textarea');
-  ta.className = 'attr-value text-content';
-  ta.value = node.content;
+  ta.className  = 'attr-value text-content';
+  ta.value      = node.content;
   ta.spellcheck = false;
-  ta.addEventListener('blur', () => {
-    node.content = ta.value;
-    emitDoc();
-  });
+  ta.addEventListener('blur', () => { node.content = ta.value; emitDoc(); });
   row.appendChild(label);
   row.appendChild(ta);
   _attrList.appendChild(row);
 }
 
 function onAddAttr() {
-  const name = _newNameInput.value.trim();
+  const name  = _newNameInput.value.trim();
   const value = _newValInput.value;
   if (!name) return;
 
@@ -148,7 +142,7 @@ function onAddAttr() {
 
   setAttr(node, name, value);
   _newNameInput.value = '';
-  _newValInput.value = '';
+  _newValInput.value  = '';
   _newNameInput.focus();
   emitDoc();
 }
@@ -165,10 +159,10 @@ function makeCmdPropRow(node, cmds, cmd, key) {
   label.title = key;
 
   const input = document.createElement('input');
-  input.className = 'attr-value';
-  input.type = 'number';
-  input.value = cmd[key];
-  input.step = 1;
+  input.className  = 'attr-value';
+  input.type       = 'number';
+  input.value      = cmd[key];
+  input.step       = 1;
   input.spellcheck = false;
 
   const commit = () => {
@@ -180,7 +174,7 @@ function makeCmdPropRow(node, cmds, cmd, key) {
   };
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { input.blur(); }
+    if (e.key === 'Enter')  { input.blur(); }
     if (e.key === 'Escape') { input.value = cmd[key]; input.blur(); }
   });
 
@@ -195,7 +189,7 @@ function makeDeleteCmdRow(node, cmds) {
   row.style.paddingTop = '6px';
 
   const btn = document.createElement('button');
-  btn.className = 'danger';
+  btn.className   = 'danger';
   btn.style.width = '100%';
   btn.textContent = 'Delete command';
   btn.addEventListener('click', () => {
@@ -216,7 +210,7 @@ function onAddCmd() {
   if (!node || node.tag !== 'path') return;
 
   const letter = _newCmdType.value;
-  const cmds = parseD(node.attrs.d || '');
+  const cmds   = parseD(node.attrs.d || '');
 
   let cx = 0, cy = 0;
   if (cmds.length > 0) {

@@ -16,7 +16,7 @@ export const doc = {
 export const editor = {
   selectedId:    null,                    // number | null — selected SvgNode._id
   selectedCmdIdx: null,                   // number | null — selected path command index
-  mode:          'select',               // 'select' | 'path-edit' | 'draw'
+  mode:          'select',               // 'select' | 'draw'
   viewport:      { x: 0, y: 0, zoom: 1 }, // document-space origin + zoom
   underlay:      null,                   // { dataUrl, opacity, includeInExport } | null
 };

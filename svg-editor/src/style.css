@@ -210,7 +210,6 @@ button.danger:hover { background: var(--danger); color: #fff; }
 }
 
 body[data-mode="select"] #canvas { cursor: default; }
-body[data-mode="path-edit"] #canvas { cursor: crosshair; }
 body[data-mode="draw"] #canvas { cursor: crosshair; }
 
 #coords {

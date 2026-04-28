@@ -7,9 +7,8 @@ let _modeButtons = null;
 
 export function init() {
   _modeButtons = document.querySelectorAll('.mode-btn');
-
   _modeButtons.forEach(btn => {
-    btn.addEventListener('click', () => setModeIfAllowed(btn.dataset.mode));
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
   });
 
   document.getElementById('btn-new').addEventListener('click', onNew);
@@ -106,8 +105,8 @@ function onCopySVG() {
 function onDownload() {
   const text = buildExportString();
   const blob = new Blob([text], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
   a.href = url; a.download = 'drawing.svg'; a.click();
   URL.revokeObjectURL(url);
 }
@@ -115,28 +114,19 @@ function onDownload() {
 function buildExportString() {
   let root = doc.root;
 
-  // Optionally embed underlay as <image> element
   if (editor.underlay?.includeInExport && editor.underlay.dataUrl) {
     const imgNode = createNode('image', {
       href: editor.underlay.dataUrl,
       x: '0', y: '0',
-      width: root.attrs.viewBox?.split(/[\s,]+/)[2] ?? '100%',
+      width:  root.attrs.viewBox?.split(/[\s,]+/)[2] ?? '100%',
       height: root.attrs.viewBox?.split(/[\s,]+/)[3] ?? '100%',
       opacity: String(editor.underlay.opacity),
       preserveAspectRatio: 'xMidYMid meet',
     });
-    root = {
-      ...root,
-      attrs: { ...root.attrs },
-      children: [imgNode, ...root.children],
-    };
+    root = { ...root, attrs: { ...root.attrs }, children: [imgNode, ...root.children] };
   }
 
-  const exportRoot = {
-    ...root,
-    attrs: { xmlns: 'http://www.w3.org/2000/svg', ...root.attrs },
-  };
-
+  const exportRoot = { ...root, attrs: { xmlns: 'http://www.w3.org/2000/svg', ...root.attrs } };
   return '<?xml version="1.0" encoding="UTF-8"?>\n' + serialize(exportRoot);
 }
 
@@ -144,7 +134,7 @@ function buildExportString() {
 
 export function onFitView() {
   const docGroup = document.getElementById('doc');
-  const canvas = document.getElementById('canvas');
+  const canvas   = document.getElementById('canvas');
   if (!docGroup || !canvas) return;
 
   let bbox = null;
@@ -162,12 +152,12 @@ export function onFitView() {
 
   if (!bbox?.width || !bbox?.height) return;
 
-  const cw = canvas.clientWidth || canvas.getBoundingClientRect().width;
+  const cw = canvas.clientWidth  || canvas.getBoundingClientRect().width;
   const ch = canvas.clientHeight || canvas.getBoundingClientRect().height;
   if (!cw || !ch) return;
 
   const zoom = Math.min(cw / bbox.width, ch / bbox.height) * 0.88;
-  const x = bbox.x - (cw / zoom - bbox.width) / 2;
+  const x = bbox.x - (cw / zoom - bbox.width)  / 2;
   const y = bbox.y - (ch / zoom - bbox.height) / 2;
   editor.viewport = { x, y, zoom };
   emitViewport();
@@ -206,9 +196,9 @@ function onUnderlayOpacity(e) {
 // --- Node tree operations ---
 
 function onAddNode() {
-  const tag = document.getElementById('add-tag-select').value;
+  const tag      = document.getElementById('add-tag-select').value;
   const parentId = editor.selectedId ?? doc.root._id;
-  const parent = findById(doc.root, parentId);
+  const parent   = findById(doc.root, parentId);
   if (!parent || parent.tag === '#text') return;
 
   const newNode = createNode(tag, defaultAttrsForTag(tag));
@@ -244,9 +234,8 @@ function onDelete() {
 
 function onKeyDown(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-  if (e.key === 's') setModeIfAllowed('select');
-  if (e.key === 'e') setModeIfAllowed('path-edit');
-  if (e.key === 'd') setModeIfAllowed('draw');
+  if (e.key === 's' || e.key === 'S') setMode('select');
+  if (e.key === 'd') setMode('draw');
   if (e.key === 'f' || e.key === 'F') onFitView();
   if (e.key === 'Delete' || e.key === 'Backspace') onDelete();
   if (e.key === 'Escape') {
@@ -255,12 +244,8 @@ function onKeyDown(e) {
   }
 }
 
-function setModeIfAllowed(mode) {
+function setMode(mode) {
   if (mode === editor.mode) return;
-  if (mode === 'path-edit') {
-    const node = editor.selectedId ? findById(doc.root, editor.selectedId) : null;
-    if (!node || node.tag !== 'path') return;
-  }
   editor.mode = mode;
   emitMode();
 }
