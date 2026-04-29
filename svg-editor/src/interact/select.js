@@ -99,7 +99,6 @@ export const handler = {
       const id = idForEl(el);
       if (id !== null) {
         editor.selectedId = id;
-        editor.selectedCmdIdx = null;
         emit('select');
         return;
       }
@@ -111,14 +110,12 @@ export const handler = {
       emit('select');
     } else {
       editor.selectedId = null;
-      editor.selectedCmdIdx = null;
       emit('select');
     }
   },
 
   onContextMenu(e, docPos) {
     editor.selectedId = null;
-    editor.selectedCmdIdx = null;
     emit('select');
   },
 };

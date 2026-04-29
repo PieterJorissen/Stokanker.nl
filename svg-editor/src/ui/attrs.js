@@ -4,16 +4,13 @@
 
 import { doc, editor, emit, emitDoc } from '../model/state.js';
 import { findById, setAttr, removeAttr } from '../model/node.js';
-import { parseD, serializeD, defaultCmd, computePositions, KEYS } from '../model/path.js';
+import { parseD, serializeD, KEYS } from '../model/path.js';
 
 let _attrList     = null;
 let _tagLabel     = null;
 let _newNameInput = null;
 let _newValInput  = null;
 let _addAttrBtn   = null;
-let _cmdAddRow    = null;
-let _newCmdType   = null;
-let _addCmdBtn    = null;
 
 export function init(els) {
   _attrList     = els.attrList;
@@ -21,13 +18,9 @@ export function init(els) {
   _newNameInput = els.newNameInput;
   _newValInput  = els.newValInput;
   _addAttrBtn   = els.addAttrBtn;
-  _cmdAddRow    = els.cmdAddRow;
-  _newCmdType   = els.newCmdType;
-  _addCmdBtn    = els.addCmdBtn;
 
   _addAttrBtn.addEventListener('click', onAddAttr);
   _newValInput.addEventListener('keydown', e => { if (e.key === 'Enter') onAddAttr(); });
-  _addCmdBtn.addEventListener('click', onAddCmd);
 }
 
 export function renderAttrs() {
@@ -39,21 +32,17 @@ export function renderAttrs() {
 
   if (!node) {
     _tagLabel.textContent = '';
-    _cmdAddRow.hidden = true;
     return;
   }
 
-  const isPath      = node.tag === 'path';
-  const cmdSelected = isPath && editor.selectedCmdIdx !== null;
-
-  // Show cmd-add controls whenever a path is selected (no mode check needed)
-  _cmdAddRow.hidden = !isPath;
+  const cmdSelected = node.tag === 'path' && editor.selectedCmdIdx !== null;
 
   // Path command selected → show command's named props as attr rows
   if (cmdSelected) {
     const cmds = parseD(node.attrs.d || '');
     const cmd  = cmds[editor.selectedCmdIdx];
-    if (cmd) {
+    if (!cmd) { editor.selectedCmdIdx = null; }
+    else {
       _tagLabel.textContent = cmd.letter;
       for (const key of (KEYS[cmd.letter] ?? [])) {
         _attrList.appendChild(makeCmdPropRow(node, cmds, cmd, key));
@@ -205,22 +194,3 @@ function makeDeleteCmdRow(node, cmds) {
   return row;
 }
 
-function onAddCmd() {
-  const node = editor.selectedId ? findById(doc.root, editor.selectedId) : null;
-  if (!node || node.tag !== 'path') return;
-
-  const letter = _newCmdType.value;
-  const cmds   = parseD(node.attrs.d || '');
-
-  let cx = 0, cy = 0;
-  if (cmds.length > 0) {
-    const positions = computePositions(cmds);
-    const last = positions[positions.length - 1];
-    cx = last.absX; cy = last.absY;
-  }
-
-  cmds.push(defaultCmd(letter, cx, cy));
-  node.attrs.d = serializeD(cmds);
-  editor.selectedCmdIdx = cmds.length - 1;
-  emitDoc();
-}
