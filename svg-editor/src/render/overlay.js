@@ -6,7 +6,7 @@ import { doc, editor } from '../model/state.js';
 import { findById } from '../model/node.js';
 import { parseD, computePositions } from '../model/path.js';
 import { elForId } from './svg.js';
-import { getPreviewPos, getDrawNodeId } from '../interact/draw.js';
+import { getPreviewPos } from '../interact/draw.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -159,10 +159,9 @@ function renderDrawPreview() {
 
   if (editor.mode !== 'draw') return;
   const preview = getPreviewPos();
-  const drawId  = getDrawNodeId();
-  if (!preview || drawId === null) return;
+  if (!preview || editor.selectedId === null) return;
 
-  const node = findById(doc.root, drawId);
+  const node = findById(doc.root, editor.selectedId);
   if (!node || node.tag !== 'path') return;
 
   const cmds = parseD(node.attrs.d || '');

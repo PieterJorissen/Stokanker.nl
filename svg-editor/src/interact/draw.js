@@ -1,58 +1,31 @@
 // Draw mode — click to append points to a path, right-click or Esc to finish.
-// Creates a new path node in the document on first click.
+// Uses editor.selectedId as the draw target; creates a new path if needed.
 // The path is a live document node — the document IS the source of truth during drawing.
 
 import { doc, editor, emit, emitDoc, emitMode } from '../model/state.js';
-import { createNode, findById, findParent } from '../model/node.js';
+import { createNode, findById } from '../model/node.js';
 import { parseD, serializeD, computePositions } from '../model/path.js';
 
-let _drawNodeId = null;   // _id of the path node being drawn
 let _previewDocPos = null;
 
-/** Start a new draw session (called when entering draw mode or on first click). */
+/** Reset preview state when entering draw mode. */
 export function startDraw() {
-  _drawNodeId = null;
   _previewDocPos = null;
-  document.getElementById('draw-hint').hidden = false;
 }
 
-/** Cancel and remove the current draw path (Escape handler). */
+/** Cancel draw — just switch mode; partial path stays as a document node. */
 export function cancelDraw() {
-  if (_drawNodeId !== null) {
-    const parent = findParent(doc.root, _drawNodeId);
-    if (parent) {
-      parent.children = parent.children.filter(c => c._id !== _drawNodeId);
-    }
-    _drawNodeId = null;
-    emitDoc();
-  }
-  document.getElementById('draw-hint').hidden = true;
-}
-
-/** Finish the current draw path (keep it). */
-export function finishDraw() {
-  _drawNodeId = null;
   _previewDocPos = null;
-  document.getElementById('draw-hint').hidden = true;
 }
 
 export const handler = {
   onDown(e, docPos) {
-    if (e.button === 2) {
-      finishDrawAndSwitch();
-      return;
-    }
-    if (e.button !== 0) return;
+    if (e.button === 2) { finishDrawAndSwitch(); return; }
   },
 
   onUp(e, docPos) {
     if (e.button !== 0) return;
-
-    if (_drawNodeId === null) {
-      createDrawPath(docPos);
-    } else {
-      appendPoint(docPos);
-    }
+    appendOrCreate(docPos);
   },
 
   onMove(e, docPos) {
@@ -61,11 +34,7 @@ export const handler = {
   },
 
   onDragEnd(e, docPos) {
-    if (_drawNodeId === null) {
-      createDrawPath(docPos);
-    } else {
-      appendPoint(docPos);
-    }
+    appendOrCreate(docPos);
   },
 
   onContextMenu(e) {
@@ -78,38 +47,34 @@ export const handler = {
   },
 };
 
-function createDrawPath(docPos) {
-  const parentId = editor.selectedId ?? doc.root._id;
-  const parent = findById(doc.root, parentId);
-  const target = (parent && parent.tag !== '#text' && parent.tag !== 'path')
-    ? parent
-    : doc.root;
+function appendOrCreate(docPos) {
+  const node = editor.selectedId ? findById(doc.root, editor.selectedId) : null;
 
-  const newPath = createNode('path', {
-    d: `M ${fmt(docPos.x)} ${fmt(docPos.y)}`,
-    fill: 'none',
-    stroke: '#000000',
-    'stroke-width': '1',
-  });
+  if (node && node.tag === 'path') {
+    const cmds = parseD(node.attrs.d || '');
+    cmds.push(buildCmd('L', docPos, cmds));
+    node.attrs.d = serializeD(cmds);
+    editor.selectedCmdIdx = cmds.length - 1;
+    emitDoc();
+  } else {
+    const parentId = editor.selectedId ?? doc.root._id;
+    const parent = findById(doc.root, parentId);
+    const target = (parent && parent.tag !== '#text' && parent.tag !== 'path')
+      ? parent
+      : doc.root;
 
-  target.children.push(newPath);
-  _drawNodeId = newPath._id;
-  editor.selectedId = newPath._id;
-  editor.selectedCmdIdx = 0;
-  emitDoc();
-}
+    const newPath = createNode('path', {
+      d: `M ${fmt(docPos.x)} ${fmt(docPos.y)}`,
+      fill: 'none',
+      stroke: '#000000',
+      'stroke-width': '1',
+    });
 
-function appendPoint(docPos) {
-  if (_drawNodeId === null) return;
-
-  const node = findById(doc.root, _drawNodeId);
-  if (!node) { _drawNodeId = null; return; }
-
-  const cmds = parseD(node.attrs.d || '');
-  cmds.push(buildCmd('L', docPos, cmds));
-  node.attrs.d = serializeD(cmds);
-  editor.selectedCmdIdx = cmds.length - 1;
-  emitDoc();
+    target.children.push(newPath);
+    editor.selectedId = newPath._id;
+    editor.selectedCmdIdx = 0;
+    emitDoc();
+  }
 }
 
 function buildCmd(letter, docPos, cmds) {
@@ -147,7 +112,7 @@ function buildCmd(letter, docPos, cmds) {
 }
 
 function finishDrawAndSwitch() {
-  finishDraw();
+  _previewDocPos = null;
   editor.mode = 'select';
   emitMode();
 }
@@ -155,11 +120,6 @@ function finishDrawAndSwitch() {
 /** Current preview position (read by overlay.js for live cursor preview line). */
 export function getPreviewPos() {
   return _previewDocPos;
-}
-
-/** Current draw node id (read by overlay.js). */
-export function getDrawNodeId() {
-  return _drawNodeId;
 }
 
 function fmt(n) {

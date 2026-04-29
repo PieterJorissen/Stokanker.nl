@@ -52,6 +52,21 @@
           <button id="btn-move-up" title="Move node up">↑</button>
           <button id="btn-move-down" title="Move node down">↓</button>
         </div>
+        <div class="tree-actions" id="cmd-add-row" hidden>
+          <select id="new-cmd-type">
+            <option>M</option><option>m</option>
+            <option>L</option><option>l</option>
+            <option>H</option><option>h</option>
+            <option>V</option><option>v</option>
+            <option>C</option><option>c</option>
+            <option>Q</option><option>q</option>
+            <option>S</option><option>s</option>
+            <option>T</option><option>t</option>
+            <option>A</option><option>a</option>
+            <option>Z</option><option>z</option>
+          </select>
+          <button id="btn-add-cmd" title="Append command">+</button>
+        </div>
       </div>
       <div id="tree-root"></div>
     </aside>
@@ -73,21 +88,6 @@
       <div class="panel-header">
         <span>Attributes</span>
         <span id="attr-node-tag" class="tag-label"></span>
-        <div class="tree-actions" id="cmd-add-row" hidden>
-          <select id="new-cmd-type">
-            <option>M</option><option>m</option>
-            <option>L</option><option>l</option>
-            <option>H</option><option>h</option>
-            <option>V</option><option>v</option>
-            <option>C</option><option>c</option>
-            <option>Q</option><option>q</option>
-            <option>S</option><option>s</option>
-            <option>T</option><option>t</option>
-            <option>A</option><option>a</option>
-            <option>Z</option><option>z</option>
-          </select>
-          <button id="btn-add-cmd" title="Append command">+</button>
-        </div>
       </div>
       <div id="attr-list"></div>
       <div id="attr-add-row">

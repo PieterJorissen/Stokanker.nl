@@ -51,7 +51,6 @@ function onNew() {
   if (!confirm('New document? Unsaved changes will be lost.')) return;
   doc.root = defaultDocument();
   editor.selectedId = null;
-  editor.selectedCmdIdx = null;
   editor.mode = 'select';
   emitDoc();
   emitMode();
@@ -82,7 +81,6 @@ function loadSVGString(src) {
   try {
     doc.root = fromString(src);
     editor.selectedId = null;
-    editor.selectedCmdIdx = null;
     editor.mode = 'select';
     emitDoc();
     emitMode();
@@ -204,7 +202,6 @@ function onAddNode() {
   const newNode = createNode(tag, defaultAttrsForTag(tag));
   parent.children.push(newNode);
   editor.selectedId = newNode._id;
-  editor.selectedCmdIdx = null;
   emitDoc();
 }
 
@@ -225,7 +222,6 @@ function onDelete() {
   if (!parent) return;
   parent.children = parent.children.filter(c => c._id !== editor.selectedId);
   editor.selectedId = null;
-  editor.selectedCmdIdx = null;
   emitDoc();
   emit('select');
 }
@@ -240,7 +236,7 @@ function onKeyDown(e) {
   if (e.key === 'Delete' || e.key === 'Backspace') onDelete();
   if (e.key === 'Escape') {
     if (editor.mode === 'draw') { emit('draw-cancel'); editor.mode = 'select'; emitMode(); }
-    else { editor.selectedId = null; editor.selectedCmdIdx = null; emit('select'); }
+    else { editor.selectedId = null; emit('select'); }
   }
 }
 

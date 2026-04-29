@@ -107,13 +107,6 @@ export function findParent(root, id) {
   return null;
 }
 
-/** Build a flat Map<_id, SvgNode> for the whole tree. */
-export function buildIdMap(root) {
-  const map = new Map();
-  walk(root, node => map.set(node._id, node));
-  return map;
-}
-
 // --- Mutations (all return void, mutate in place) ---
 
 /** Set an attribute value on a node. */

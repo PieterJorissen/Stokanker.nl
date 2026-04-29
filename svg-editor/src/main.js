@@ -33,9 +33,6 @@ function init() {
     newNameInput: document.getElementById('attr-new-name'),
     newValInput:  document.getElementById('attr-new-val'),
     addAttrBtn:   document.getElementById('btn-add-attr'),
-    cmdAddRow:    document.getElementById('cmd-add-row'),
-    newCmdType:   document.getElementById('new-cmd-type'),
-    addCmdBtn:    document.getElementById('btn-add-cmd'),
   });
   Toolbar.init();
 
