@@ -1,169 +1,204 @@
 # SVG Editor — Architecture Brief
 
+## Core principle
+
+Custom elements are the document model. The registry is the grammar. The tree is the document. The browser is the renderer.
+
+Each custom element type (`<svg-circle>`, `<svg-path>`, `<svg-cmd-l>`, …) is a class registered via `customElements.define`. The class definition is the type system — `static observedAttributes` declares the valid attribute set for that node type. No external schema, no validation logic.
+
+Custom elements never try to be SVG nodes. They describe them. A lightweight renderer walks the custom element tree and maintains a corresponding live SVG DOM in a single shared `<svg>` element, in the correct namespace and ancestry. The browser renders that SVG natively.
+
+---
+
+## Path commands are children, not a string attribute
+
+This is the most important structural decision in the architecture and must be settled first, because it propagates into every other part.
+
+In SVG, a path's geometry is encoded as a single `d` string: `d="M 10 10 L 100 100 C …"`. That is a serialisation format, not a data model.
+
+In this architecture, **each path command is a child custom element of `<svg-path>`**:
+
+```html
+<svg-path fill="none" stroke="#000">
+  <svg-cmd-m x="10" y="10"/>
+  <svg-cmd-l x="100" y="100"/>
+  <svg-cmd-c x1="50" y1="50" x2="80" y2="20" x="100" y="100"/>
+  <svg-cmd-z/>
+</svg-path>
+```
+
+The `d` attribute is an output of the renderer, not a property of the model.
+
+### Why this is right
+
+- **DOM identity.** Each command has a real element reference. Selection, drag, and deletion all operate on `this` — no integer index bookkeeping.
+- **Registry is the grammar, completely.** `SvgCmdC.observedAttributes = ['x1','y1','x2','y2','x','y']` declares exactly what a C command holds. The KEYS table from the old implementation is replaced by `customElements.get(tagName).observedAttributes`.
+- **Tree panel needs no special cases.** `<svg-cmd-*>` elements are real DOM children. The tree walks them exactly like any other children — no virtual rows, no separate cmd rendering path.
+- **Move, delete, add are standard DOM mutations.** `cmdEl.remove()`, `parent.insertBefore(a, b)`, `pathEl.appendChild(new SvgCmdL())` — nothing custom needed.
+- **Selection is unified.** `editor.selectedEl` is always a DOM reference whether it points to `<svg-circle>` or `<svg-cmd-l>`. `editor.selectedCmdIdx` (an integer) does not exist.
+
+### Command element naming
+
+One class per command letter. Relative variants use a `relative` boolean attribute, sharing the same class:
+
+```
+<svg-cmd-m x="10" y="10"/>          → M 10 10  (absolute)
+<svg-cmd-m relative x="5" y="5"/>   → m 5 5    (relative)
+```
+
+Ten element types: `svg-cmd-m`, `svg-cmd-l`, `svg-cmd-h`, `svg-cmd-v`, `svg-cmd-c`, `svg-cmd-s`, `svg-cmd-q`, `svg-cmd-t`, `svg-cmd-a`, `svg-cmd-z`. Each declares only the attributes relevant to it. `svg-cmd-z` has no numeric attributes.
+
+### Renderer for path
+
+`<svg-path>`'s SVG counterpart is a `<path>` element. Whenever any cmd child changes (attribute, addition, removal), the path element reserialises its `d`:
+
+```js
+updateD() {
+  const d = [...this.children]
+    .filter(c => c instanceof SvgCmd)
+    .map(c => c.serialize())   // each cmd knows how to write its letter + values
+    .join(' ');
+  this.svgNode.setAttribute('d', d);
+}
+```
+
+Each `<svg-cmd-*>`'s `attributeChangedCallback` calls `this.parentElement?.updateD?.()`. Cmd elements do not have their own SVG nodes — they are data nodes only. The parent path owns the single `<path>` SVG element.
+
+### Import (load from SVG string)
+
+Parse the SVG DOM → for each `<path>`, parse `d` into commands → create `<svg-cmd-*>` children with the right attributes. The `d` string is consumed on load and never stored in the model.
+
+### Export
+
+For `<svg-path>`: walk `<svg-cmd-*>` children, call `serialize()` on each, join into `d`, write `<path d="…" …/>`. Same `serialize()` method the renderer uses — one implementation.
+
+---
+
 ## Model
 
-Custom elements are the document model. Each element type (`<svg-circle>`, `<svg-path>`, `<svg-rect>`, …) is a class registered via `customElements.define`. The class definition is the type system:
-
-- `static observedAttributes` — declares the valid attribute set for that node type
-- `connectedCallback` — creates the corresponding SVG element in the shared `<svg>` and appends it under the parent element's SVG node
-- `attributeChangedCallback(name, _, value)` — updates the live SVG element in place
-- `disconnectedCallback` — removes the SVG element
-
-Each custom element stores a reference to its SVG counterpart (`this.svgNode`). Parent lookup is a single `this.parentElement.svgNode` call — DOM ancestry IS the SVG ancestry. The browser renders the SVG tree. No reconciler, no sync layer.
-
 ```
-<svg-document>         → <svg>
-  <svg-g>              →   <g>
-    <svg-path>         →     <path d="…"/>
-    <svg-circle>       →     <circle cx="…" cy="…" r="…"/>
+<svg-document>              → <svg viewBox="…">
+  <svg-g>                   →   <g>
+    <svg-path>              →     <path d="M… L…"/>
+      <svg-cmd-m x y/>      →       (data only, no SVG node)
+      <svg-cmd-l x y/>      →       (data only, no SVG node)
+    <svg-circle cx cy r/>   →     <circle cx cy r/>
+    <svg-rect …/>           →     <rect …/>
+    <svg-text>              →     <text>
+      (text content node)   →       text content
 ```
 
-The registry is the grammar. The tree is the document. The browser is the renderer.
+Each structural element (`svg-circle`, `svg-rect`, etc.) owns one SVG element (`this.svgNode`). Path commands own none.
+
+**`connectedCallback`** — structural elements create their SVG node and append it to `this.parentElement.svgNode`. Path cmd elements call `this.parentElement?.updateD?.()`.
+
+**`attributeChangedCallback`** — structural elements call `this.svgNode.setAttribute(name, value)`. Path cmd elements call `this.parentElement?.updateD?.()`.
+
+**`disconnectedCallback`** — structural elements remove `this.svgNode`. Path cmd elements call `this.parentElement?.updateD?.()`.
 
 ---
 
 ## Editor state
 
-A plain module (not part of the document model):
-
 ```js
 export const editor = {
-  selectedEl:    null,   // custom element reference | null
-  selectedCmdIdx: null,  // path command index | null
-  mode:          'select', // 'select' | 'draw'
-  viewport:      { x: 0, y: 0, zoom: 1 },
-  underlay:      null,   // { dataUrl, opacity, includeInExport } | null
+  selectedEl:  null,   // custom element reference | null (node OR cmd element)
+  mode:        'select', // 'select' | 'draw'
+  viewport:    { x: 0, y: 0, zoom: 1 },
+  underlay:    null,   // { dataUrl, opacity, includeInExport } | null
 };
 ```
 
-Selection is a DOM reference, not an ID. No ID management needed.
+`selectedCmdIdx` does not exist. Selection is always a DOM reference. To know if a command is selected: `editor.selectedEl instanceof SvgCmd`. To find the owning path: `editor.selectedEl.parentElement` (an `<svg-path>`).
 
 ---
 
-## Path data model (carry forward verbatim)
+## Path data helpers (carry forward)
 
-Path `d` attribute parsing is non-trivial. The following logic is proven correct and worth porting directly into `SvgPathElement`:
+These pure functions are proven correct and used by the renderer and canvas overlay. Port them verbatim into a `path-utils.js` module:
 
-**`parseD(d) → PathCommand[]`**  
-Tokenises the `d` string. Expands implicit repetition (M followed by extra coord pairs → M then L). Each command is a named-prop object matching SVG 1.1 spec:
-- `{ letter: 'M', x, y }`
-- `{ letter: 'L', x, y }`
-- `{ letter: 'C', x1, y1, x2, y2, x, y }`
-- `{ letter: 'H', x }` / `{ letter: 'V', y }`
-- `{ letter: 'A', rx, ry, 'x-axis-rotation', 'large-arc-flag', 'sweep-flag', x, y }`
-- `{ letter: 'Z' }`
+**`parseD(d) → PathCommand[]`** — tokenise, expand implicit repetition, return named-prop objects. Used only during import.
 
-**`serializeD(commands) → string`**  
-Serialises back to `d`. Uses a `KEYS` table (command letter → ordered named props) as the single source of truth for arity.
+**`serializeD(commands) → string`** — inverse. Used as a reference; in practice each `<svg-cmd-*>` implements `serialize()` directly.
 
-**`computePositions(commands) → { absX, absY, controls: [{x,y}] }[]`**  
-Walks commands tracking current position. Returns absolute anchor + bezier control point positions for each command. Used by the canvas overlay to draw handles. Handles S/s reflected control points correctly.
-
-**`defaultCmd(letter, cx, cy) → PathCommand`**  
-Returns a new command with sensible defaults offset from the current position `(cx, cy)`. Used when appending a command via the UI.
-
-**`KEYS` table**
+**`computePositions(commands) → { absX, absY, controls: [{x,y}] }[]`** — compute absolute anchor + bezier control point positions from a command sequence. Used by the canvas overlay to place handles. The overlay reads commands from the `<svg-cmd-*>` children directly:
 ```js
-{
-  M: ['x','y'],   m: ['x','y'],
-  L: ['x','y'],   l: ['x','y'],
-  H: ['x'],       h: ['x'],
-  V: ['y'],       v: ['y'],
-  C: ['x1','y1','x2','y2','x','y'],
-  S: ['x2','y2','x','y'],
-  Q: ['x1','y1','x','y'],
-  T: ['x','y'],
-  A: ['rx','ry','x-axis-rotation','large-arc-flag','sweep-flag','x','y'],
-  Z: [],
-}
+const cmds = [...pathEl.children]
+  .filter(c => c instanceof SvgCmd)
+  .map(c => c.toCommand());   // returns { letter, x, y, … }
 ```
+
+**`defaultCmd(letter, cx, cy) → PathCommand`** — sensible defaults for a new command at current position. Used when appending a command via UI.
 
 ---
 
 ## Canvas overlay
 
-A `<canvas>` positioned over the `<svg>` (absolute, pointer-events on canvas only). Reads SVG element geometry via `svgEl.getBBox()`. Owns no data.
+A `<canvas>` positioned over the `<svg>`. Reads geometry only — owns no data.
 
-**Draws:**
-- Selection box: padded rect around `getBBox()` of selected element (skip for paths — handles are the indicator)
-- Document border: thin dashed rect from `<svg viewBox>`
-- Path anchors: circles at each command's `absX/absY` from `computePositions()`; filled orange when `selectedCmdIdx` matches, blue otherwise
-- Bezier control handles: smaller circles at `controls[]` positions; dashed lines from anchor to handle
-- Draw preview: dashed line from last anchor to current cursor position (draw mode only)
+**Selection box**: padded rect around `getBBox()` of the selected element's `svgNode`. Skipped for path nodes (handles are the selection indicator).
 
-**Hit testing:**  
-On pointer down, check cursor against known handle/anchor positions (from last render). Anchor hit → start drag for that command. No SVG element hit — fall through to element selection via `document.elementFromPoint` + `closest('[data-svg-el]')` or similar.
+**Path handles**: when `editor.selectedEl` is an `<svg-cmd-*>` or its parent `<svg-path>` is selected, draw anchors and bezier handles at positions from `computePositions()`. The selected anchor: `editor.selectedEl instanceof SvgCmd && editor.selectedEl === cmdEl`.
 
-**Drag (path anchors/handles):**  
-Snapshot the relevant named props at drag start. On move, apply delta to the snapshotted values and write back to `element.svgNode.setAttribute(...)` and `element.setAttribute(...)` to keep both in sync. Named props (not positional indices) make this unambiguous.
+**Hit testing on pointer down**: check cursor against anchor/handle positions from last render pass. Each rendered anchor stores a reference to its `<svg-cmd-*>` element. On hit: `editor.selectedEl = cmdEl`. On miss: fall through to element selection via `document.elementFromPoint`.
 
----
+**Drag**: snapshot `cmdEl`'s named attributes at drag start. On move, apply delta, write back via `cmdEl.setAttribute(name, value)` — `attributeChangedCallback` propagates to path re-render automatically.
 
-## Viewport / pan / zoom
-
-`viewport = { x, y, zoom }` applied as a `transform` on the doc group inside `<svg>`:
-```
-translate(${-x * zoom}, ${-y * zoom}) scale(${zoom})
-```
-or equivalently a `viewBox` update on the root `<svg>`.
-
-- **Pan:** pointer drag on background → `x -= dx / zoom; y -= dy / zoom`
-- **Zoom:** wheel → `zoom *= factor`; adjust x/y to keep cursor point stationary
-- **Fit:** get `<svg>.getBBox()` of all content; compute zoom to fit with 12% padding; centre
+**Draw preview**: dashed line from last cmd's `absX/absY` to cursor. Last cmd is `pathEl.lastElementChild` of the current draw path.
 
 ---
 
 ## Draw mode
 
 On canvas click at `docPos`:
-1. If `editor.selectedEl` is an `<svg-path>`: append an L command to its `d` attribute
-2. Else: create a new `<svg-path>` child of the selected element (or document root); select it; set its `d` to `M x y`
+1. If `editor.selectedEl` is an `<svg-cmd-*>` or `<svg-path>`: get the path element, append a new `<svg-cmd-l>` child with `x/y` from `docPos`
+2. Else: create `<svg-path>` under the selected container (or document root); append `<svg-cmd-m x y>` as first child; select the path
 
-**Building an L command from click position:**
-```js
-const cmds = parseD(pathEl.getAttribute('d') || '');
-const positions = computePositions(cmds);
-const { absX: cx, absY: cy } = positions.at(-1);
-cmds.push({ letter: 'L', x: docPos.x, y: docPos.y });
-pathEl.setAttribute('d', serializeD(cmds));
-```
-
-Right-click or Escape exits draw mode. Partial path stays as a real document node.
+Right-click or Escape → switch to select mode. Partial path stays as real document nodes.
 
 ---
 
 ## Tree panel
 
-Walks the custom element tree with DOM APIs — no custom walk utilities needed:
-```js
-function buildRow(el) {
-  // el.tagName, el.attributes, el.children
-  // querySelector / closest for navigation
-}
-```
+Walk `customElementTree.children` recursively with DOM APIs. No custom walk utilities.
 
-Path commands shown as virtual child rows below `<svg-path>`, derived from `parseD(el.getAttribute('d'))`.
+`<svg-cmd-*>` children of `<svg-path>` appear as real DOM children — no virtual rows, no special path handling. The tree renders them identically to any other child node (different CSS class for visual distinction).
 
-Cmd-add affordance visible only when selected element is `<svg-path>`.
+Selected state: `el === editor.selectedEl`.
 
 ---
 
 ## Attribute panel
 
-For selected element: iterate `el.attributes`, render as editable name/value pairs.  
-For selected path command: show `KEYS[cmd.letter]` props as numeric inputs.  
-Stale-index guard: if `parseD(d)[selectedCmdIdx]` is undefined, null out `selectedCmdIdx`.
+If `editor.selectedEl instanceof SvgCmd`: show `customElements.get(el.tagName.toLowerCase()).observedAttributes` (minus `relative`) as numeric inputs. This replaces the KEYS lookup — the registry IS the schema.
+
+If structural element: iterate `el.attributes`, render as editable name/value pairs. Add/remove attributes normally.
+
+No `selectedCmdIdx` stale-index guard needed — the element reference is either valid or null.
 
 ---
 
 ## Export
 
-Walk the custom element tree recursively. For each element, read `el.tagName` (strip `svg-` prefix → SVG tag name) and `el.attributes`. Serialize to SVG string. Ensure `xmlns="http://www.w3.org/2000/svg"` on root. Prepend XML declaration.
-
-Optionally prepend underlay as `<image href="…" opacity="…"/>` first child.
+Walk the custom element tree recursively:
+- Structural elements: tag name (strip `svg-` prefix), copy `el.attributes` (excluding internal attrs)
+- `<svg-path>`: collect `<svg-cmd-*>` children → serialize `d`
+- Text content nodes: text content
+- Ensure `xmlns` on root; prepend XML declaration
+- Optional: prepend underlay as `<image>` first child
 
 ---
 
 ## UI shell
 
-Dark monospace theme. Layout: toolbar (top) + tree panel (left, 220px) + canvas (flex 1) + attr panel (right, 280px). Panels scroll independently. Dialogs for paste, underlay. All existing toolbar operations carry over: New, Load, Paste, Copy SVG, Download, Fit, Underlay, Delete. Keyboard: S (select), D (draw), F (fit), Delete/Backspace (delete node), Escape (cancel / deselect).
+Dark monospace theme. Layout: toolbar (top) + tree panel (left, 220px) + canvas (flex 1) + attr panel (right, 280px). Toolbar: New, Load, Paste, Copy SVG, Download, Fit, Underlay, Delete. Keyboard: S (select), D (draw), F (fit), Delete/Backspace (delete), Escape (cancel / deselect). Cmd-add affordance in tree panel header, visible only when `editor.selectedEl` is or is inside an `<svg-path>`.
+
+---
+
+## Viewport / pan / zoom
+
+`viewport = { x, y, zoom }` applied as transform on the SVG doc group.
+
+- **Pan**: pointer drag on background → `x -= dx / zoom; y -= dy / zoom`
+- **Zoom**: wheel → `zoom *= factor`; adjust origin to keep cursor point stationary
+- **Fit**: `svgDocGroup.getBBox()`, compute zoom to fill viewport with 12% padding, centre
